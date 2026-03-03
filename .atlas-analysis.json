@@ -1,0 +1,108 @@
+{
+  "projectType": "frontend",
+  "projectName": "AlXuraan",
+  "projectDescription": "A comprehensive Islamic mobile application for Quran reading, prayer times, Hadith collections, and spiritual practices built with React Native and Expo.",
+  "theme": "palm",
+  "primaryColor": "#00A79D",
+  "lightColor": "#00C5B8",
+  "darkColor": "#008A82",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/quran",
+              "features/prayer-times",
+              "features/hadith",
+              "features/dhikr",
+              "features/qibla"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/player",
+              "components/prayer-times",
+              "components/recitation-list",
+              "components/audio-controls"
+            ]
+          },
+          {
+            "group": "Services & APIs",
+            "pages": [
+              "services/quran-service",
+              "services/prayer-times-service",
+              "services/hadith-service",
+              "services/notification-service"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/project-structure",
+              "development/navigation",
+              "development/state-management"
+            ]
+          },
+          {
+            "group": "Customization",
+            "pages": [
+              "development/theming",
+              "development/localization",
+              "development/hooks"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/building",
+              "deployment/eas-build",
+              "deployment/app-stores"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Quran reading with Arabic text, French translation, and Wolof translation",
+    "Accurate prayer times based on geolocation with notifications",
+    "Comprehensive Hadith collections (Sahih Bukhari, Muslim, and more)",
+    "Audio recitations from multiple Qaris with playback controls",
+    "Qibla direction finder using device sensors",
+    "Dhikr counter and Islamic supplications",
+    "Favorites management for verses and Hadiths",
+    "Live streaming from Masjid Al-Haram and Masjid Al-Nabawi"
+  ],
+  "publicApiSurface": [
+    "quranService.getSuraNames()",
+    "quranService.getSuraTranslation(suraNumber)",
+    "quranService.getAyaTranslation(suraNumber, ayaNumber)",
+    "prayerTimesService.getUserLocation()",
+    "prayerTimesService.getPrayerTimesByCoords(latitude, longitude)",
+    "prayerTimesService.schedulePrayerTimeNotifications(prayerTimes)",
+    "hadithService.getCollectionsList()",
+    "hadithService.loadCollection(collectionName, language)",
+    "hadithService.searchHadith(query, collectionName)",
+    "notificationService.requestPermissions()",
+    "notificationService.scheduleAllPrayerNotifications(times)",
+    "aladhanService.getPrayerTimes(latitude, longitude)",
+    "aladhanService.getCurrentHijriDate()"
+  ]
+}
