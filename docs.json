@@ -56,7 +56,8 @@
               "services/quran-service",
               "services/prayer-times-service",
               "services/hadith-service",
-              "services/notification-service"
+              "services/notification-service",
+              "services/aladhan-service"
             ]
           }
         ]

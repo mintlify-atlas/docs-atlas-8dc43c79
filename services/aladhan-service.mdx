@@ -1,0 +1,319 @@
+---
+title: Aladhan service
+description: Islamic calendar and prayer times service using the Aladhan API
+---
+
+# Aladhan Service
+
+The Aladhan service provides Islamic calendar conversions and prayer times through integration with the [Aladhan API](https://aladhan.com/prayer-times-api). This service handles Hijri calendar conversions, prayer time calculations, and provides access to various calculation methods.
+
+## Overview
+
+The `aladhanService` is located in `services/aladhanService.jsx` and provides a comprehensive interface to the Aladhan API for Islamic calendar and prayer time functionality.
+
+## API Base URL
+
+```javascript
+const ALADHAN_BASE_URL = 'https://api.aladhan.com/v1';
+```
+
+## Functions
+
+### getCurrentHijriDate
+
+Retrieves the current Hijri (Islamic) date.
+
+<ParamField path="none" type="void">
+  No parameters required
+</ParamField>
+
+**Returns:** `Promise<Object>` - Current Hijri date data
+
+<ResponseField name="gregorian" type="object">
+  Gregorian date information
+</ResponseField>
+
+<ResponseField name="hijri" type="object">
+  Hijri date with day, month, year, and designation
+</ResponseField>
+
+**Example:**
+
+```javascript
+import { aladhanService } from '../services/aladhanService';
+
+const hijriDate = await aladhanService.getCurrentHijriDate();
+console.log(`${hijriDate.hijri.day} ${hijriDate.hijri.month.en} ${hijriDate.hijri.year} H`);
+// Output: "15 Ramadan 1445 H"
+```
+
+**Response Structure:**
+
+```typescript
+{
+  gregorian: {
+    date: string,
+    day: string,
+    month: { number: number, en: string },
+    year: string
+  },
+  hijri: {
+    date: string,
+    day: string,
+    month: { number: number, en: string, ar: string },
+    year: string,
+    designation: { abbreviated: string, expanded: string }
+  }
+}
+```
+
+### convertToHijri
+
+Converts a Gregorian date to Hijri date.
+
+<ParamField path="gregorianDate" type="Date" required>
+  JavaScript Date object to convert
+</ParamField>
+
+**Returns:** `Promise<Object>` - Converted Hijri date data
+
+**Example:**
+
+```javascript
+const gregorianDate = new Date('2024-03-15');
+const hijriDate = await aladhanService.convertToHijri(gregorianDate);
+console.log(hijriDate.hijri.date); // e.g., "05-09-1445"
+```
+
+### convertToGregorian
+
+Converts a Hijri date to Gregorian date.
+
+<ParamField path="day" type="number" required>
+  Hijri day (1-30)
+</ParamField>
+
+<ParamField path="month" type="number" required>
+  Hijri month (1-12)
+</ParamField>
+
+<ParamField path="year" type="number" required>
+  Hijri year
+</ParamField>
+
+**Returns:** `Promise<Object>` - Converted Gregorian date data
+
+**Example:**
+
+```javascript
+// Convert 1 Ramadan 1445 to Gregorian
+const gregorianDate = await aladhanService.convertToGregorian(1, 9, 1445);
+console.log(gregorianDate.gregorian.date); // e.g., "11-03-2024"
+```
+
+### getPrayerTimes
+
+Fetches prayer times for a specific location using coordinates.
+
+<ParamField path="latitude" type="number" required>
+  Location latitude (-90 to 90)
+</ParamField>
+
+<ParamField path="longitude" type="number" required>
+  Location longitude (-180 to 180)
+</ParamField>
+
+<ParamField path="method" type="number" default={2}>
+  Calculation method (default: 2 for ISNA)
+</ParamField>
+
+**Returns:** `Promise<Object>` - Prayer times for all prayers
+
+**Example:**
+
+```javascript
+const times = await aladhanService.getPrayerTimes(48.8566, 2.3522, 2);
+console.log(times.Fajr);    // "05:30"
+console.log(times.Dhuhr);   // "13:15"
+console.log(times.Asr);     // "16:45"
+console.log(times.Maghrib); // "19:30"
+console.log(times.Isha);    // "21:00"
+```
+
+**Response Structure:**
+
+```typescript
+{
+  Fajr: string,
+  Sunrise: string,
+  Dhuhr: string,
+  Asr: string,
+  Sunset: string,
+  Maghrib: string,
+  Isha: string,
+  Imsak: string,
+  Midnight: string
+}
+```
+
+### getMonthlyPrayerTimes
+
+Retrieves prayer times for an entire month.
+
+<ParamField path="latitude" type="number" required>
+  Location latitude
+</ParamField>
+
+<ParamField path="longitude" type="number" required>
+  Location longitude
+</ParamField>
+
+<ParamField path="year" type="number" required>
+  Gregorian year (e.g., 2024)
+</ParamField>
+
+<ParamField path="month" type="number" required>
+  Gregorian month (1-12)
+</ParamField>
+
+<ParamField path="method" type="number" default={2}>
+  Calculation method
+</ParamField>
+
+**Returns:** `Promise<Array>` - Array of daily prayer times for the month
+
+**Example:**
+
+```javascript
+// Get prayer times for March 2024 in Paris
+const monthlyTimes = await aladhanService.getMonthlyPrayerTimes(
+  48.8566, 2.3522, 2024, 3, 2
+);
+
+monthlyTimes.forEach((day) => {
+  console.log(`${day.date.readable}: Fajr ${day.timings.Fajr}`);
+});
+```
+
+### getCalculationMethods
+
+Fetches all available prayer time calculation methods.
+
+<ParamField path="none" type="void">
+  No parameters required
+</ParamField>
+
+**Returns:** `Promise<Object>` - Object containing all calculation methods
+
+**Example:**
+
+```javascript
+const methods = await aladhanService.getCalculationMethods();
+console.log(methods);
+// Output includes: MWL, ISNA, Egypt, Makkah, Karachi, Tehran, Jafari, etc.
+```
+
+**Response Structure:**
+
+```typescript
+{
+  "0": { id: 0, name: "Shia Ithna-Ansari" },
+  "1": { id: 1, name: "University of Islamic Sciences, Karachi" },
+  "2": { id: 2, name: "Islamic Society of North America (ISNA)" },
+  "3": { id: 3, name: "Muslim World League (MWL)" },
+  "4": { id: 4, name: "Umm al-Qura, Makkah" },
+  // ... more methods
+}
+```
+
+## Calculation Methods
+
+The Aladhan API supports multiple calculation methods for prayer times:
+
+| Method ID | Name | Region |
+|-----------|------|--------|
+| 0 | Shia Ithna-Ansari | Shia communities |
+| 1 | University of Islamic Sciences, Karachi | Pakistan |
+| 2 | Islamic Society of North America (ISNA) | North America |
+| 3 | Muslim World League (MWL) | Global |
+| 4 | Umm al-Qura, Makkah | Saudi Arabia |
+| 5 | Egyptian General Authority of Survey | Egypt |
+| 7 | Institute of Geophysics, Tehran | Iran |
+
+<Note>
+  The default method in AlXuraan is **ISNA (method 2)**, which is widely used in North America and suitable for most locations.
+</Note>
+
+## Usage in AlXuraan
+
+The Aladhan service is used throughout the app:
+
+### HomeScreen - Display Hijri Date
+
+```javascript
+// From HomeScreen.jsx
+const hijri = await aladhanService.getCurrentHijriDate();
+if (mounted) setHijriDate(hijri);
+
+// Display in UI
+<Text className="text-white text-lg font-semibold">
+  {hijriDate && `${hijriDate.day} ${hijriDate.month.en} ${hijriDate.year} H`}
+</Text>
+```
+
+### PrayerTimesScreen - Fetch Prayer Times
+
+```javascript
+// From PrayerTimesScreen.jsx
+const times = await aladhanService.getPrayerTimes(
+  locationData.latitude,
+  locationData.longitude
+);
+setPrayerTimes(times);
+```
+
+## Error Handling
+
+All functions include try-catch error handling and log errors to the console:
+
+```javascript
+getCurrentHijriDate: async () => {
+  try {
+    const response = await axios.get(`${ALADHAN_BASE_URL}/gToH`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching hijri date:', error);
+    throw error;
+  }
+}
+```
+
+<Warning>
+  Always wrap Aladhan service calls in try-catch blocks in your components to handle network failures or API errors gracefully.
+</Warning>
+
+## API Limits
+
+The Aladhan API is free and does not have strict rate limits, but you should:
+
+- Cache prayer times for the day to reduce API calls
+- Use monthly calendar endpoint for calendar views instead of making daily calls
+- Implement error handling for network failures
+
+## Related Services
+
+<CardGroup cols={2}>
+  <Card title="Prayer Times Service" icon="clock" href="/services/prayer-times-service">
+    Higher-level prayer times with notifications
+  </Card>
+  
+  <Card title="Notification Service" icon="bell" href="/services/notification-service">
+    Schedule prayer time notifications
+  </Card>
+</CardGroup>
+
+## Source Code
+
+The complete implementation can be found in:
+- **File:** `services/aladhanService.jsx`
+- **API Documentation:** [Aladhan API Docs](https://aladhan.com/prayer-times-api)
