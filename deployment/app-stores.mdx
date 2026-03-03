@@ -1,0 +1,499 @@
+---
+title: 'App Store Publishing'
+description: 'Submit AlXuraan to Apple App Store and Google Play Store'
+---
+
+## Overview
+
+This guide covers the complete process of publishing AlXuraan to both the Apple App Store and Google Play Store, including preparing assets, configuring store listings, and submitting builds.
+
+## Prerequisites
+
+Before publishing, ensure you have:
+
+- Completed production builds using EAS Build
+- Apple Developer account ($99/year)
+- Google Play Developer account ($25 one-time fee)
+- All required app assets (icons, screenshots, descriptions)
+- Privacy policy URL (required for both stores)
+
+## App Identifiers
+
+AlXuraan uses the following identifiers configured in `app.config.ts`:
+
+<CodeGroup>
+
+```typescript iOS Bundle Identifier
+{
+  ios: {
+    bundleIdentifier: 'com.devdiop.alxuraan'
+  }
+}
+```
+
+```typescript Android Package Name
+{
+  android: {
+    package: 'com.devdiop.alxuraan'
+  }
+}
+```
+
+</CodeGroup>
+
+<Warning>
+  These identifiers must match exactly in your app store listings. They cannot be changed after the first submission.
+</Warning>
+
+## Required Assets
+
+### App Icons
+
+AlXuraan's icon configuration:
+
+```typescript
+{
+  icon: './assets/icon.png',           // 1024x1024 PNG
+  ios: {
+    // iOS uses the main icon
+  },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#ffffff'
+    }
+  }
+}
+```
+
+**Required Sizes:**
+- **iOS**: 1024x1024px PNG (Expo auto-generates other sizes)
+- **Android Adaptive Icon**: 1024x1024px PNG with safe zone
+
+### Splash Screen
+
+Configured in `app.config.ts`:
+
+```typescript
+{
+  splash: {
+    image: './assets/splash.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff'
+  }
+}
+```
+
+### Screenshots
+
+Prepare screenshots for both platforms:
+
+**iOS Requirements:**
+- 6.7" iPhone (1290 x 2796 pixels) - required
+- 6.5" iPhone (1242 x 2688 pixels) - required
+- 5.5" iPhone (1242 x 2208 pixels) - optional
+- iPad Pro (2048 x 2732 pixels) - if supporting tablets
+
+**Android Requirements:**
+- Phone (1080 x 1920 to 1440 x 2560 pixels) - minimum 2 screenshots
+- 7" Tablet (optional)
+- 10" Tablet (optional)
+
+<Note>
+  Take screenshots showing AlXuraan's key features: Quran reading, audio playback, prayer times, and Qibla direction.
+</Note>
+
+### App Store Graphics
+
+**iOS:**
+- App icon (1024x1024px)
+- Screenshots (various sizes)
+- App Preview video (optional)
+
+**Android:**
+- Feature graphic (1024 x 500px) - required
+- Promotional graphic (180 x 120px) - optional
+- Screenshots (at least 2)
+- Promo video (YouTube link) - optional
+
+## Publishing to Apple App Store
+
+### Step 1: Create App Store Connect Record
+
+<Steps>
+  <Step title="Login to App Store Connect">
+    Visit [App Store Connect](https://appstoreconnect.apple.com) and log in with your Apple Developer account.
+  </Step>
+  
+  <Step title="Create new app">
+    Click "My Apps" → "+" → "New App"
+    
+    Fill in:
+    - **Platform**: iOS
+    - **Name**: AlXuraan
+    - **Primary Language**: English (or your preference)
+    - **Bundle ID**: `com.devdiop.alxuraan`
+    - **SKU**: `alxuraan-ios` (can be any unique identifier)
+  </Step>
+  
+  <Step title="Configure app information">
+    Fill in required fields:
+    - Subtitle (max 30 characters)
+    - Privacy Policy URL
+    - Category: Books or Reference
+    - Content Rights information
+  </Step>
+</Steps>
+
+### Step 2: Build with EAS
+
+Create a production build for iOS:
+
+```bash
+eas build --profile production --platform ios
+```
+
+Wait for the build to complete. EAS will automatically sign your app with the appropriate credentials.
+
+### Step 3: Submit to App Store
+
+Using EAS Submit:
+
+```bash
+eas submit --platform ios
+```
+
+This command will:
+1. Prompt you to select a build
+2. Upload the build to App Store Connect
+3. Automatically configure submission settings
+
+<Info>
+  Alternatively, download the `.ipa` file from the EAS build and upload it manually using Xcode or Transporter app.
+</Info>
+
+### Step 4: Complete App Store Listing
+
+In App Store Connect, complete:
+
+1. **App Information**
+   - Description (max 4000 characters)
+   - Keywords (max 100 characters)
+   - Support URL
+   - Marketing URL (optional)
+
+2. **Screenshots**
+   - Upload screenshots for required device sizes
+
+3. **Promotional Text** (optional)
+   - Can be updated without new version
+
+4. **App Review Information**
+   - Contact information
+   - Demo account (if required)
+   - Notes for reviewer
+
+5. **Version Information**
+   - What's new in this version
+
+### Step 5: Submit for Review
+
+<Steps>
+  <Step title="Add build to version">
+    In the "Build" section, click "+" and select your uploaded build.
+  </Step>
+  
+  <Step title="Complete questionnaire">
+    Answer questions about:
+    - Export compliance
+    - Content rights
+    - Advertising identifier usage
+  </Step>
+  
+  <Step title="Submit">
+    Click "Submit for Review"
+  </Step>
+</Steps>
+
+<Warning>
+  iOS review typically takes 24-48 hours. Ensure all information is accurate and screenshots match your app's current state.
+</Warning>
+
+## Publishing to Google Play Store
+
+### Step 1: Create Google Play Console App
+
+<Steps>
+  <Step title="Login to Play Console">
+    Visit [Google Play Console](https://play.google.com/console) and log in.
+  </Step>
+  
+  <Step title="Create new app">
+    Click "Create app"
+    
+    Fill in:
+    - **App name**: AlXuraan
+    - **Default language**: English (or your preference)
+    - **App or game**: App
+    - **Free or paid**: Free (or Paid)
+  </Step>
+  
+  <Step title="Accept declarations">
+    Accept developer program policies and US export laws.
+  </Step>
+</Steps>
+
+### Step 2: Complete App Setup
+
+Before uploading builds, complete:
+
+1. **App Access**
+   - Specify if all features are accessible or restricted
+
+2. **Ads**
+   - Declare if your app contains ads
+
+3. **Content Rating**
+   - Complete IARC questionnaire
+   - Receive official content ratings
+
+4. **Target Audience**
+   - Select target age groups
+
+5. **News App**
+   - Declare if app is a news app (likely No for AlXuraan)
+
+6. **COVID-19 Contact Tracing**
+   - Declare if app is related to COVID-19 (No)
+
+7. **Data Safety**
+   - Declare what data you collect
+   - Privacy policy URL
+
+### Step 3: Create Store Listing
+
+Navigate to "Store presence" → "Main store listing":
+
+1. **App Details**
+   - App name: AlXuraan
+   - Short description (max 80 characters)
+   - Full description (max 4000 characters)
+
+2. **Graphics**
+   - App icon (512 x 512px)
+   - Feature graphic (1024 x 500px)
+   - Phone screenshots (minimum 2)
+   - 7" tablet screenshots (optional)
+   - 10" tablet screenshots (optional)
+
+3. **Categorization**
+   - App category: Books & Reference
+   - Tags (optional)
+
+4. **Contact Details**
+   - Email
+   - Phone (optional)
+   - Website (optional)
+
+5. **Privacy Policy**
+   - Privacy policy URL (required)
+
+### Step 4: Build with EAS
+
+Create a production build for Android:
+
+```bash
+eas build --profile production --platform android
+```
+
+This generates an `.aab` (Android App Bundle) file.
+
+### Step 5: Submit to Google Play
+
+Using EAS Submit:
+
+```bash
+eas submit --platform android
+```
+
+Select the build and EAS will upload it to Google Play Console.
+
+<Info>
+  You can also manually upload the `.aab` file in the Play Console under "Release" → "Production" → "Create new release".
+</Info>
+
+### Step 6: Create Production Release
+
+<Steps>
+  <Step title="Navigate to Production">
+    Go to "Release" → "Production" → "Create new release"
+  </Step>
+  
+  <Step title="Add app bundle">
+    Upload or select your `.aab` file from EAS
+  </Step>
+  
+  <Step title="Add release details">
+    - Release name: `1.0.0` (matches version in app.config.ts)
+    - Release notes: Describe what's new
+  </Step>
+  
+  <Step title="Review and rollout">
+    Review all information and click "Start rollout to Production"
+  </Step>
+</Steps>
+
+<Note>
+  Google Play review is typically faster than iOS, often completing within a few hours.
+</Note>
+
+## Using EAS Submit
+
+EAS Submit automates app store submission from the command line.
+
+### Submit Configuration
+
+AlXuraan's `eas.json` includes submit configuration:
+
+```json
+{
+  "submit": {
+    "production": {}
+  }
+}
+```
+
+### Submit Commands
+
+<CodeGroup>
+
+```bash Submit to iOS
+eas submit --platform ios --latest
+```
+
+```bash Submit to Android
+eas submit --platform android --latest
+```
+
+```bash Submit Both Platforms
+eas submit --platform all --latest
+```
+
+```bash Submit Specific Build
+eas submit --platform ios --id [build-id]
+```
+
+</CodeGroup>
+
+The `--latest` flag automatically uses the most recent production build.
+
+## App Permissions
+
+Ensure you document all permissions AlXuraan uses:
+
+### iOS Permissions (Info.plist)
+
+```typescript
+{
+  ios: {
+    infoPlist: {
+      UIBackgroundModes: ['audio'],
+      NSLocationWhenInUseUsageDescription: 'For accurate prayer times and Qibla direction',
+      NSMicrophoneUsageDescription: 'To enable voice features' // if applicable
+    }
+  }
+}
+```
+
+### Android Permissions
+
+Declare in Play Console:
+- Location (for prayer times and Qibla)
+- Background audio (for Quran recitation)
+- Notifications (for prayer reminders)
+
+## Version Updates
+
+When releasing updates:
+
+<Steps>
+  <Step title="Update version">
+    Update version in `app.config.ts`:
+    
+    ```typescript
+    {
+      version: '1.0.1'
+    }
+    ```
+  </Step>
+  
+  <Step title="Build new version">
+    ```bash
+    eas build --profile production --platform all
+    ```
+  </Step>
+  
+  <Step title="Submit to stores">
+    ```bash
+    eas submit --platform all --latest
+    ```
+  </Step>
+  
+  <Step title="Update store listings">
+    Add "What's New" notes in both App Store Connect and Play Console.
+  </Step>
+</Steps>
+
+## Post-Launch Checklist
+
+After submission:
+
+- [ ] Monitor review status in both consoles
+- [ ] Respond promptly to any review feedback
+- [ ] Prepare support resources for user questions
+- [ ] Set up crash reporting and analytics
+- [ ] Monitor initial user reviews and ratings
+- [ ] Plan for first update based on feedback
+
+## Troubleshooting
+
+### iOS Rejection for Missing Info.plist Descriptions
+
+Ensure all permissions have usage descriptions in `app.config.ts`:
+
+```typescript
+{
+  ios: {
+    infoPlist: {
+      NSLocationWhenInUseUsageDescription: 'Clear description here'
+    }
+  }
+}
+```
+
+### Android Missing Privacy Policy
+
+Add privacy policy URL in Play Console under "Store presence" → "Privacy Policy".
+
+### Build Not Appearing in Store Console
+
+Wait 15-30 minutes after upload. For EAS Submit, check submission status:
+
+```bash
+eas submit:list
+```
+
+### Version Code Conflicts (Android)
+
+EAS automatically increments version codes. If manual upload conflicts occur, increment the version in `app.config.ts`.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="EAS Build" icon="cloud" href="/deployment/eas-build">
+    Learn more about building with EAS
+  </Card>
+  <Card title="Local Building" icon="laptop" href="/deployment/building">
+    Build and test locally before submission
+  </Card>
+</CardGroup>

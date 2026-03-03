@@ -1,0 +1,419 @@
+---
+title: 'Prayer Times'
+description: 'Accurate prayer times with notifications and location-based calculations'
+---
+
+## Overview
+
+AlXuraan provides highly accurate prayer times based on the user's location using the Aladhan API. The feature includes automatic location detection, customizable calculation methods, and smart notifications with background fetch support.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Auto Location" icon="location-dot">
+    Automatic GPS-based location detection using Expo Location
+  </Card>
+  <Card title="Smart Notifications" icon="bell">
+    Prayer time and 15-minute pre-prayer reminders
+  </Card>
+  <Card title="Background Updates" icon="clock">
+    Automatic hourly updates even when app is closed
+  </Card>
+  <Card title="Multiple Methods" icon="calculator">
+    Support for various calculation methods (MWL, ISNA, etc.)
+  </Card>
+</CardGroup>
+
+## Prayer Configuration
+
+The app supports all five daily prayers with custom icons and gradients:
+
+```javascript Prayer Config
+// Source: screens/PrayerTimesScreen.jsx:20-51
+const PRAYER_CONFIG = {
+  Fajr: {
+    name: "Fajr",
+    nameFr: "Aube",
+    icon: Sunrise,
+    gradient: ['#928DAB', '#928DAB'],
+  },
+  Dhuhr: {
+    name: "Dhuhr",
+    nameFr: "Midi",
+    icon: Sun,
+    gradient: ['#928DAB', '#928DAB'],
+  },
+  Asr: {
+    name: "Asr",
+    nameFr: "Après-midi",
+    icon: Sun,
+    gradient: ['#928DAB', '#928DAB'],
+  },
+  Maghrib: {
+    name: "Maghrib",
+    nameFr: "Coucher du soleil",
+    icon: Sunset,
+    gradient: ['#928DAB', '#928DAB'],
+  },
+  Isha: {
+    name: "Isha",
+    nameFr: "Nuit",
+    icon: Moon,
+    gradient: ['#928DAB', '#928DAB'],
+  },
+};
+```
+
+## Location Services
+
+### Getting User Location
+
+<CodeGroup>
+
+```javascript Get Location
+// Source: services/prayerTimesService.jsx:43-62
+export const getUserLocation = async () => {
+  try {
+    // Request location permissions
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.error('Location permission denied');
+      return null;
+    }
+
+    // Get current position
+    const location = await Location.getCurrentPositionAsync({});
+    return {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    };
+  } catch (error) {
+    console.error('Error getting location:', error);
+    return null;
+  }
+};
+```
+
+```javascript Get Prayer Times
+// Source: services/prayerTimesService.jsx:71-85
+export const getPrayerTimesByCoords = async (latitude, longitude, method = 2) => {
+  try {
+    const response = await axios.get('https://api.aladhan.com/v1/timings', {
+      params: {
+        latitude,
+        longitude,
+        method,  // 1: MWL, 2: ISNA, 3: Egypt, etc.
+      },
+    });
+    return response.data.data.timings;
+  } catch (error) {
+    console.error('Error fetching prayer times:', error);
+    throw error;
+  }
+};
+```
+
+</CodeGroup>
+
+<Info>
+  The default calculation method is ISNA (method = 2). You can customize this based on your region's preference.
+</Info>
+
+## Notification System
+
+### Scheduling Notifications
+
+AlXuraan schedules two types of notifications for each prayer:
+
+1. **Prayer Time Notification** - Triggered at the exact prayer time
+2. **Reminder Notification** - Triggered 15 minutes before prayer time
+
+<CodeGroup>
+
+```javascript Schedule Notifications
+// Source: services/prayerTimesService.jsx:91-168
+export const schedulePrayerTimeNotifications = async (prayerTimes) => {
+  try {
+    // Request notification permissions
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.error('Notification permission denied');
+      return;
+    }
+
+    // Cancel all previous notifications
+    await Notifications.cancelAllScheduledNotificationsAsync();
+
+    const today = new Date();
+
+    // List of prayers
+    const prayers = [
+      { key: 'Fajr', name: 'Fajr (Aube)', icon: 'sunrise' },
+      { key: 'Dhuhr', name: 'Dhuhr (Midi)', icon: 'sun' },
+      { key: 'Asr', name: 'Asr (Après-midi)', icon: 'sun' },
+      { key: 'Maghrib', name: 'Maghrib (Coucher du soleil)', icon: 'sunset' },
+      { key: 'Isha', name: 'Isha (Nuit)', icon: 'moon' }
+    ];
+
+    // Schedule notification for each prayer
+    for (const prayer of prayers) {
+      const time = prayerTimes[prayer.key];
+      if (!time) continue;
+
+      const [hours, minutes] = time.split(':').map(Number);
+      const prayerDate = new Date(today);
+      prayerDate.setHours(hours, minutes, 0);
+
+      // If time has passed, schedule for next day
+      if (prayerDate <= new Date()) {
+        prayerDate.setDate(prayerDate.getDate() + 1);
+      }
+
+      // Schedule prayer time notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `C'est l'heure de la prière: ${prayer.name}`,
+          body: `Il est ${time}`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          date: prayerDate,
+          channelId: 'prayer-times',
+        },
+      });
+
+      // Schedule 15-minute reminder
+      const reminderDate = new Date(prayerDate);
+      reminderDate.setMinutes(reminderDate.getMinutes() - 15);
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Rappel: ${prayer.name} dans 15 minutes`,
+          body: `La prière de ${prayer.name} est à ${time}`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: {
+          date: reminderDate,
+          channelId: 'prayer-times',
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error scheduling notifications:', error);
+  }
+};
+```
+
+```javascript Setup Notification Handler
+// Source: services/prayerTimesService.jsx:173-194
+export const setupNotifications = async () => {
+  // Configure notification handler
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  // Create Android notification channel
+  await Notifications.setNotificationChannelAsync('prayer-times', {
+    name: 'Horaires de prière',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#FF231F7C',
+    sound: true,
+  });
+
+  // Register background fetch task
+  await registerBackgroundFetch();
+};
+```
+
+</CodeGroup>
+
+## Background Fetch
+
+Automatic prayer time updates even when the app is closed:
+
+```javascript Background Task
+// Source: services/prayerTimesService.jsx:7-37
+const BACKGROUND_FETCH_TASK = 'BACKGROUND_FETCH_TASK';
+
+// Define background task
+TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+  try {
+    const location = await getUserLocation();
+    if (location) {
+      const { latitude, longitude } = location;
+      const times = await getPrayerTimesByCoords(latitude, longitude);
+      await schedulePrayerTimeNotifications(times);
+    }
+    return BackgroundFetch.BackgroundFetchResult.NewData;
+  } catch (error) {
+    console.error('Background fetch error:', error);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
+});
+
+// Register background task
+export const registerBackgroundFetch = async () => {
+  try {
+    await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+      minimumInterval: 60 * 60, // Update every hour
+      stopOnTerminate: false,
+      startOnBoot: true,
+    });
+  } catch (error) {
+    console.error('Error registering background fetch:', error);
+  }
+};
+```
+
+<Warning>
+  Background fetch may not work consistently on all devices due to battery optimization settings.
+</Warning>
+
+## UI Implementation
+
+### Prayer Times Screen
+
+The main prayer times screen includes:
+
+<Steps>
+  <Step title="Load Location">
+    Automatically detects user's GPS coordinates
+  </Step>
+  <Step title="Fetch Times">
+    Retrieves prayer times from Aladhan API
+  </Step>
+  <Step title="Display Cards">
+    Shows beautiful animated cards for each prayer
+  </Step>
+  <Step title="Toggle Notifications">
+    Switch to enable/disable prayer notifications
+  </Step>
+</Steps>
+
+### Notification Toggle
+
+```javascript Toggle Implementation
+// Source: screens/PrayerTimesScreen.jsx:80-97
+const toggleNotifications = async (value) => {
+  try {
+    setNotificationsEnabled(value);
+    await AsyncStorage.setItem('notificationsEnabled', value.toString());
+
+    if (value) {
+      await setupNotifications();
+      if (prayerTimes) {
+        await schedulePrayerTimeNotifications(prayerTimes);
+      }
+    } else {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
+  } catch (error) {
+    console.error('Error toggling notifications:', error);
+    setErrorMessage("Error modifying notification settings");
+  }
+};
+```
+
+### Animated Display
+
+```javascript Animation
+// Source: screens/PrayerTimesScreen.jsx:124-139
+useEffect(() => {
+  if (!loading && prayerTimes) {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }
+}, [loading, prayerTimes]);
+```
+
+## Calculation Methods
+
+The Aladhan API supports multiple calculation methods:
+
+<Tabs>
+  <Tab title="ISNA (Default)">
+    **Islamic Society of North America**
+    - Method ID: 2
+    - Fajr Angle: 15°
+    - Isha Angle: 15°
+  </Tab>
+  <Tab title="MWL">
+    **Muslim World League**
+    - Method ID: 1
+    - Fajr Angle: 18°
+    - Isha Angle: 17°
+  </Tab>
+  <Tab title="Egypt">
+    **Egyptian General Authority**
+    - Method ID: 3
+    - Fajr Angle: 19.5°
+    - Isha Angle: 17.5°
+  </Tab>
+  <Tab title="Makkah">
+    **Umm Al-Qura University, Makkah**
+    - Method ID: 4
+    - Fajr Angle: 18.5°
+    - Isha: 90 min after Maghrib
+  </Tab>
+</Tabs>
+
+## API Response Structure
+
+```json Example Response
+{
+  "data": {
+    "timings": {
+      "Fajr": "05:30",
+      "Sunrise": "06:45",
+      "Dhuhr": "12:15",
+      "Asr": "15:30",
+      "Maghrib": "18:00",
+      "Isha": "19:15"
+    },
+    "date": {
+      "readable": "03 Mar 2026",
+      "timestamp": "1740960000"
+    }
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Permission Handling" icon="shield-check">
+    Always check and request location/notification permissions before use
+  </Card>
+  <Card title="Error Recovery" icon="arrows-rotate">
+    Implement pull-to-refresh for when location services fail
+  </Card>
+  <Card title="Offline Cache" icon="floppy-disk">
+    Cache last known prayer times for offline access
+  </Card>
+  <Card title="Battery Optimization" icon="battery-full">
+    Educate users about disabling battery optimization for notifications
+  </Card>
+</CardGroup>
+
+## Related Features
+
+- [Qibla Finder](/features/qibla) - Find prayer direction to Mecca
+- [Dhikr Counter](/features/dhikr) - Post-prayer remembrance counter
+- [Quran Reading](/features/quran) - Read Quran during prayer times

@@ -1,0 +1,497 @@
+---
+title: 'Qibla Finder'
+description: 'Find the direction to Mecca using GPS and compass sensors'
+---
+
+## Overview
+
+The Qibla Finder helps users determine the direction to the Kaaba in Mecca for prayer. It uses GPS location services and device magnetometer sensors to calculate the precise bearing and display a visual compass pointing toward the Qibla.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="GPS Location" icon="location-crosshairs">
+    Automatic detection of user's current coordinates
+  </Card>
+  <Card title="Compass Sensor" icon="compass">
+    Real-time magnetometer data for direction
+  </Card>
+  <Card title="Distance Calculation" icon="ruler">
+    Show distance to Mecca in kilometers
+  </Card>
+  <Card title="Visual Compass" icon="circle-dot">
+    Beautiful compass UI with Qibla indicator
+  </Card>
+</CardGroup>
+
+## Implementation
+
+The Qibla service uses Expo's Location and Sensors APIs combined with the geolib library for calculations.
+
+### Core Constants
+
+```javascript Kaaba Coordinates
+// Source: services/qiblaService.jsx:6-10
+const KAABA_COORDS = {
+  latitude: 21.422487,   // Mecca, Saudi Arabia
+  longitude: 39.826206,
+};
+```
+
+<Info>
+  These are the precise GPS coordinates of the Holy Kaaba in Mecca.
+</Info>
+
+## API Functions
+
+### Get Qibla Direction
+
+<CodeGroup>
+
+```javascript Calculate Qibla
+// Source: services/qiblaService.jsx:13-43
+getQiblaDirection: async () => {
+  try {
+    // Request location permission
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== 'granted') {
+      throw new Error('Location permission not granted');
+    }
+
+    // Get current position
+    const location = await Location.getCurrentPositionAsync({});
+    const currentCoords = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    };
+
+    // Calculate bearing to Kaaba
+    const bearing = geolib.getRhumbLineBearing(currentCoords, KAABA_COORDS);
+
+    return {
+      bearing,                                                    // Direction in degrees
+      distance: geolib.getDistance(currentCoords, KAABA_COORDS) / 1000,  // km
+      currentCoords,
+      kaabaCoords: KAABA_COORDS,
+    };
+  } catch (error) {
+    console.error('Error getting qibla direction:', error);
+    throw error;
+  }
+}
+```
+
+```javascript Start Magnetometer
+// Source: services/qiblaService.jsx:45-56
+startMagnetometerUpdates: (callback) => {
+  Magnetometer.setUpdateInterval(100); // Update every 100ms
+
+  const subscription = Magnetometer.addListener((data) => {
+    // Calculate compass angle
+    const angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
+    callback(angle);
+  });
+
+  return subscription;
+}
+```
+
+```javascript Stop Magnetometer
+// Source: services/qiblaService.jsx:58-63
+stopMagnetometerUpdates: (subscription) => {
+  if (subscription) {
+    subscription.remove();
+  }
+}
+```
+
+</CodeGroup>
+
+## Custom Hook
+
+Use the `useQibla` hook for easy integration:
+
+```javascript useQibla Hook
+// Source: services/qiblaService.jsx:66-117
+import { useQibla } from '../services/qiblaService';
+
+const QiblaScreen = () => {
+  const { qiblaData, compassHeading, qiblaAngle, loading, error } = useQibla();
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <View>
+      <CompassView angle={qiblaAngle} />
+      <Text>Distance to Mecca: {qiblaData.distance.toFixed(0)} km</Text>
+    </View>
+  );
+};
+```
+
+### Hook Implementation
+
+<CodeGroup>
+
+```javascript Full Hook Code
+// Source: services/qiblaService.jsx:67-117
+export const useQibla = () => {
+  const [qiblaData, setQiblaData] = useState(null);
+  const [compassHeading, setCompassHeading] = useState(0);
+  const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initQibla = async () => {
+      try {
+        setLoading(true);
+        const data = await qiblaService.getQiblaDirection();
+
+        if (mounted) {
+          setQiblaData(data);
+
+          // Start magnetometer
+          const sub = qiblaService.startMagnetometerUpdates((heading) => {
+            if (mounted) {
+              setCompassHeading(heading);
+            }
+          });
+
+          setSubscription(sub);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    };
+
+    initQibla();
+
+    return () => {
+      mounted = false;
+      if (subscription) {
+        qiblaService.stopMagnetometerUpdates(subscription);
+      }
+    };
+  }, []);
+
+  // Calculate qibla angle relative to current direction
+  const qiblaAngle = qiblaData ? (qiblaData.bearing - compassHeading + 360) % 360 : 0;
+
+  return { qiblaData, compassHeading, qiblaAngle, loading, error };
+};
+```
+
+</CodeGroup>
+
+## Bearing Calculation
+
+The service uses the **Rhumb Line Bearing** method for direction calculation:
+
+<Note>
+  A rhumb line (or loxodrome) is a path of constant bearing, which makes it ideal for compass navigation. While not the shortest distance, it's easier to follow with a compass.
+</Note>
+
+```javascript Bearing Formula
+// Using geolib library
+import * as geolib from 'geolib';
+
+const bearing = geolib.getRhumbLineBearing(
+  { latitude: userLat, longitude: userLon },
+  { latitude: kaabaLat, longitude: kaabaLon }
+);
+
+// Returns: 0-360 degrees (0 = North, 90 = East, 180 = South, 270 = West)
+```
+
+### Distance Calculation
+
+```javascript Distance Formula
+// Using geolib library
+const distanceInMeters = geolib.getDistance(
+  { latitude: userLat, longitude: userLon },
+  { latitude: kaabaLat, longitude: kaabaLon }
+);
+
+const distanceInKm = distanceInMeters / 1000;
+```
+
+## Compass UI Implementation
+
+Example compass component using rotation:
+
+```javascript Compass Component
+import { View, Animated, StyleSheet } from 'react-native';
+
+const CompassView = ({ qiblaAngle }) => {
+  const rotation = new Animated.Value(qiblaAngle);
+
+  useEffect(() => {
+    Animated.timing(rotation, {
+      toValue: qiblaAngle,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [qiblaAngle]);
+
+  const rotateStyle = {
+    transform: [
+      {
+        rotate: rotation.interpolate({
+          inputRange: [0, 360],
+          outputRange: ['0deg', '360deg'],
+        }),
+      },
+    ],
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Background compass */}
+      <View style={styles.compassCircle}>
+        <Text style={styles.northLabel}>N</Text>
+        {/* Other direction labels */}
+      </View>
+
+      {/* Rotating Qibla indicator */}
+      <Animated.View style={[styles.qiblaIndicator, rotateStyle]}>
+        <Arrow />
+      </Animated.View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    width: 300,
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compassCircle: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 2,
+    borderColor: '#333',
+  },
+  qiblaIndicator: {
+    position: 'absolute',
+  },
+});
+```
+
+## Sensor Calibration
+
+<Warning>
+  Magnetometer accuracy can be affected by magnetic interference from metal objects, electronics, and buildings. Always calibrate the compass before use.
+</Warning>
+
+### Calibration Instructions
+
+<Steps>
+  <Step title="Move Away from Metal">
+    Step away from large metal objects, electronics, and magnetic sources
+  </Step>
+  <Step title="Figure-8 Motion">
+    Move the phone in a figure-8 pattern to calibrate the magnetometer
+  </Step>
+  <Step title="Level Surface">
+    Hold the phone flat and level for best accuracy
+  </Step>
+  <Step title="Verify North">
+    Check that the compass points to true north before using
+  </Step>
+</Steps>
+
+### Calibration Component
+
+```javascript Calibration Screen
+const CalibrationScreen = ({ onComplete }) => {
+  const [calibrating, setCalibrating] = useState(true);
+  const [accuracy, setAccuracy] = useState(0);
+
+  useEffect(() => {
+    const subscription = Magnetometer.addListener(({ x, y, z }) => {
+      // Calculate magnetic field strength
+      const strength = Math.sqrt(x * x + y * y + z * z);
+      
+      // Estimate accuracy (simplified)
+      const expectedStrength = 50; // μT (microtesla)
+      const accuracyPercent = Math.min(
+        100,
+        (1 - Math.abs(strength - expectedStrength) / expectedStrength) * 100
+      );
+      
+      setAccuracy(accuracyPercent);
+      
+      if (accuracyPercent > 80) {
+        setCalibrating(false);
+        setTimeout(onComplete, 1000);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  return (
+    <View>
+      <Text>Calibrating Compass...</Text>
+      <Text>Move phone in figure-8 pattern</Text>
+      <ProgressBar progress={accuracy / 100} />
+    </View>
+  );
+};
+```
+
+## Error Handling
+
+Common errors and solutions:
+
+<Accordion title="Location Permission Denied">
+  ```javascript
+  if (status !== 'granted') {
+    // Show explanation
+    Alert.alert(
+      'Location Required',
+      'Qibla finder needs your location to calculate direction to Mecca.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() }
+      ]
+    );
+  }
+  ```
+</Accordion>
+
+<Accordion title="GPS Not Available">
+  ```javascript
+  try {
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+      timeout: 10000,
+    });
+  } catch (error) {
+    if (error.code === 'E_LOCATION_TIMEOUT') {
+      Alert.alert('GPS Timeout', 'Unable to get location. Please check GPS settings.');
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Magnetometer Unavailable">
+  ```javascript
+  const isAvailable = await Magnetometer.isAvailableAsync();
+  
+  if (!isAvailable) {
+    Alert.alert(
+      'Compass Not Available',
+      'Your device does not have a magnetometer sensor.'
+    );
+  }
+  ```
+</Accordion>
+
+## Data Structure
+
+### Qibla Data Object
+
+```typescript TypeScript Interface
+interface QiblaData {
+  bearing: number;              // Direction in degrees (0-360)
+  distance: number;             // Distance to Mecca in kilometers
+  currentCoords: {
+    latitude: number;
+    longitude: number;
+  };
+  kaabaCoords: {
+    latitude: number;
+    longitude: number;
+  };
+}
+```
+
+### Compass State
+
+```typescript TypeScript Interface
+interface CompassState {
+  qiblaData: QiblaData | null;
+  compassHeading: number;       // Current device heading (0-360)
+  qiblaAngle: number;          // Relative angle to Qibla
+  loading: boolean;
+  error: string | null;
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Update Rate" icon="gauge">
+    Use 100ms update interval for smooth compass rotation
+  </Card>
+  <Card title="Cleanup" icon="broom">
+    Always remove magnetometer listener in useEffect cleanup
+  </Card>
+  <Card title="Accuracy Check" icon="circle-check">
+    Show calibration UI if magnetometer accuracy is low
+  </Card>
+  <Card title="Battery Usage" icon="battery-half">
+    Stop magnetometer updates when screen is not visible
+  </Card>
+</CardGroup>
+
+## Advanced Features
+
+### Augmented Reality View
+
+Use device camera with compass overlay:
+
+```javascript AR Qibla
+import { Camera } from 'expo-camera';
+
+const ARQiblaView = ({ qiblaAngle }) => {
+  return (
+    <View style={{ flex: 1 }}>
+      <Camera style={{ flex: 1 }} type={Camera.Constants.Type.back}>
+        <QiblaOverlay angle={qiblaAngle} />
+      </Camera>
+    </View>
+  );
+};
+```
+
+### 3D Kaaba Direction
+
+Show 3D arrow pointing to Mecca:
+
+```javascript 3D Direction
+import { GLView } from 'expo-gl';
+
+const Kaaba3DDirection = ({ bearing, elevation }) => {
+  // Use Three.js or Expo GL for 3D rendering
+  return (
+    <GLView
+      style={{ width: 300, height: 300 }}
+      onContextCreate={(gl) => {
+        // Initialize 3D scene
+        // Render Kaaba model or arrow
+        // Rotate based on bearing and elevation
+      }}
+    />
+  );
+};
+```
+
+## Related Features
+
+- [Prayer Times](/features/prayer-times) - Know when to pray
+- [Dhikr Counter](/features/dhikr) - Count remembrance after prayer
+- [Quran Reading](/features/quran) - Read Quran facing Qibla

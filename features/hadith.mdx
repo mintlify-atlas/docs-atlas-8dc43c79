@@ -1,0 +1,570 @@
+---
+title: 'Hadith Collections'
+description: 'Access authentic hadith collections with multi-language support and advanced search'
+---
+
+## Overview
+
+AlXuraan provides access to major authentic hadith collections including Sahih al-Bukhari, Sahih Muslim, and the six canonical books. The feature supports Arabic, French, and English translations with powerful search capabilities and CDN-based loading for optimal performance.
+
+## Supported Collections
+
+<CardGroup cols={3}>
+  <Card title="Sahih al-Bukhari" icon="book">
+    7,277 hadiths across 97 books - The most authentic collection
+  </Card>
+  <Card title="Sahih Muslim" icon="book">
+    7,459 hadiths across 57 books - Second most authentic
+  </Card>
+  <Card title="Sunan Abu Dawood" icon="book">
+    5,274 hadiths across 43 books - Juridical hadith collection
+  </Card>
+  <Card title="Sunan an-Nasa'i" icon="book">
+    Fiqh-focused hadith collection
+  </Card>
+  <Card title="Sunan Ibn Majah" icon="book">
+    One of the six canonical collections
+  </Card>
+  <Card title="Muwatta Malik" icon="book">
+    One of the earliest hadith compilations
+  </Card>
+  <Card title="40 Hadith Nawawi" icon="star">
+    40 fundamental hadiths of Islam
+  </Card>
+  <Card title="Hadith Qudsi" icon="mosque">
+    Sacred narrations from the Prophet
+  </Card>
+  <Card title="40 Hadith Dehlawi" icon="book-open">
+    Selected collection of 40 hadiths
+  </Card>
+</CardGroup>
+
+## Architecture
+
+### CDN-Based Loading
+
+Hadiths are loaded from a CDN for optimal performance and reduced app size:
+
+```javascript CDN URL Generation
+// Source: services/hadithService.jsx:22-47
+const getHadithCDNUrl = (collectionName, language = 'fr', minified = true) => {
+  // Normalize collection name
+  const normalizedName = collectionName.toLowerCase().replace('albukhari', 'bukhari');
+
+  // Find in metadata
+  const collection = collectionsMetadata[normalizedName];
+  if (!collection) {
+    console.warn(`Collection ${collectionName} not found in collections.json`);
+    return null;
+  }
+
+  // Get language prefix
+  const langPrefix = LANGUAGE_PREFIX_MAP[language] || 'fra';
+
+  // Find corresponding edition
+  const edition = collection.collection.find(ed =>
+    ed.language.toLowerCase() === (
+      language === 'fr' ? 'french' : 
+      language === 'ar' ? 'arabic' : 'english'
+    )
+  );
+
+  if (!edition) {
+    console.warn(`Language ${language} not found for ${collectionName}`);
+    return null;
+  }
+
+  return minified ? edition.linkmin : edition.link;
+};
+```
+
+### Caching Strategy
+
+Two-tier caching system for optimal performance:
+
+<Steps>
+  <Step title="Memory Cache">
+    In-memory cache using JavaScript objects for instant access
+  </Step>
+  <Step title="AsyncStorage Cache">
+    Persistent cache using React Native AsyncStorage
+  </Step>
+  <Step title="CDN Fetch">
+    Fetch from CDN only if not in cache
+  </Step>
+</Steps>
+
+<CodeGroup>
+
+```javascript Load Collection Data
+// Source: services/hadithService.jsx:143-198
+const loadCollectionData = async (fileName, language = 'fr') => {
+  const cacheKey = `${fileName}-${language}`;
+
+  // Check memory cache first
+  if (collectionsCache[cacheKey]) {
+    console.log(`Using memory cache for: ${cacheKey}`);
+    return collectionsCache[cacheKey];
+  }
+
+  // Check AsyncStorage cache
+  const storageKey = `@hadith_cdn_${cacheKey}`;
+  try {
+    const cachedData = await AsyncStorage.getItem(storageKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      collectionsCache[cacheKey] = parsed;
+      console.log(`Using AsyncStorage cache for: ${cacheKey}`);
+      return parsed;
+    }
+  } catch (error) {
+    console.warn('Error reading cache:', error);
+  }
+
+  // Load from CDN
+  console.log(`Loading from CDN: ${cacheKey}`);
+  const cdnUrl = getHadithCDNUrl(fileName, language, true);
+
+  if (!cdnUrl) {
+    throw new Error(`Collection ${fileName} not available for language ${language}`);
+  }
+
+  try {
+    const response = await fetch(cdnUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status} loading ${fileName}`);
+    }
+
+    const data = await response.json();
+
+    // Cache in memory
+    collectionsCache[cacheKey] = data;
+
+    // Save to AsyncStorage (async, don't wait)
+    AsyncStorage.setItem(storageKey, JSON.stringify(data)).catch((err) =>
+      console.warn('Error saving cache:', err)
+    );
+
+    console.log(`Collection loaded from CDN: ${cacheKey}`);
+    return data;
+  } catch (error) {
+    console.error(`Error loading ${fileName}-${language}:`, error);
+    throw new Error(`Unable to load collection ${fileName}: ${error.message}`);
+  }
+};
+```
+
+</CodeGroup>
+
+## Core API Functions
+
+### Get All Collections
+
+```javascript Get Collections
+// Source: services/hadithService.jsx:266-297
+getCollections: async () => {
+  try {
+    // Load metadata for each collection
+    const collectionsWithMeta = await Promise.all(
+      AVAILABLE_COLLECTIONS.map(async (collection) => {
+        try {
+          const data = await loadCollectionData(collection.fileName, 'fr');
+          return {
+            ...collection,
+            name: data.metadata?.name || collection.name,
+            numberOfHadith: data.hadiths?.length || 0,
+            totalBooks: Object.keys(data.metadata?.sections || {}).length,
+          };
+        } catch (error) {
+          console.warn(`Unable to load ${collection.fileName}:`, error);
+          return {
+            ...collection,
+            numberOfHadith: 0,
+            totalBooks: 0,
+          };
+        }
+      })
+    );
+
+    return {
+      collections: collectionsWithMeta.filter(c => c.numberOfHadith > 0)
+    };
+  } catch (error) {
+    console.error('Error fetching collections:', error);
+    throw error;
+  }
+}
+```
+
+### Get Specific Hadith
+
+```javascript Get Hadith by Number
+// Source: services/hadithService.jsx:322-356
+getHadithByNumber: async (collectionKey, hadithNumber, options = {}) => {
+  try {
+    const fileName = getFileNameFromKey(collectionKey);
+    const language = options.language || 'fr';
+
+    // Load both French and Arabic versions
+    const [frenchData, arabicData] = await Promise.all([
+      loadCollectionData(fileName, 'fr'),
+      loadCollectionData(fileName, 'ar')
+    ]);
+
+    // Find hadith by number
+    const frenchHadith = frenchData.hadiths?.find(h => h.hadithnumber === hadithNumber);
+    const arabicHadith = arabicData.hadiths?.find(h => h.hadithnumber === hadithNumber);
+
+    if (!frenchHadith) {
+      throw new Error(`Hadith ${hadithNumber} not found in ${collectionKey}`);
+    }
+
+    const combined = combineHadithData(frenchHadith, arabicHadith);
+
+    return {
+      collection: collectionKey,
+      hadithNumber: hadithNumber,
+      ...combined,
+      collectionInfo: {
+        name: frenchData.metadata?.name || collectionKey,
+        key: collectionKey,
+      },
+    };
+  } catch (error) {
+    console.error(`Error fetching hadith ${collectionKey}/${hadithNumber}:`, error);
+    throw error;
+  }
+}
+```
+
+### Random Hadith
+
+```javascript Get Random Hadith
+// Source: services/hadithService.jsx:361-401
+getRandomHadith: async () => {
+  try {
+    // Choose random collection
+    const randomCollection = AVAILABLE_COLLECTIONS[
+      Math.floor(Math.random() * AVAILABLE_COLLECTIONS.length)
+    ];
+
+    const fileName = randomCollection.fileName;
+    const [frenchData, arabicData] = await Promise.all([
+      loadCollectionData(fileName, 'fr'),
+      loadCollectionData(fileName, 'ar')
+    ]);
+
+    if (!frenchData.hadiths || frenchData.hadiths.length === 0) {
+      throw new Error('No hadith available');
+    }
+
+    // Choose random hadith
+    const randomIndex = Math.floor(Math.random() * frenchData.hadiths.length);
+    const frenchHadith = frenchData.hadiths[randomIndex];
+    const arabicHadith = arabicData.hadiths?.find(
+      h => h.hadithnumber === frenchHadith.hadithnumber
+    );
+
+    const combined = combineHadithData(frenchHadith, arabicHadith);
+
+    return {
+      hadith: {
+        id: `${fileName}-${frenchHadith.hadithnumber}`,
+        collection: randomCollection.name,
+        collectionKey: randomCollection.key,
+        book: `Book ${frenchHadith.reference?.book || 1}`,
+        chapter: getSectionName(frenchData.metadata, frenchHadith),
+        ...combined,
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching random hadith:', error);
+    throw error;
+  }
+}
+```
+
+## Search Functionality
+
+### Multi-Collection Search
+
+<CodeGroup>
+
+```javascript Search Hadiths
+// Source: services/hadithService.jsx:406-477
+searchHadiths: async (query, options = {}) => {
+  try {
+    const language = options.language || 'fr';
+    const collection = options.collection || '';
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+
+    // Determine collections to search
+    const collectionsToSearch = collection
+      ? [AVAILABLE_COLLECTIONS.find(c => 
+          c.key === collection || c.fileName === getFileNameFromKey(collection)
+        )]
+      : AVAILABLE_COLLECTIONS;
+
+    const allResults = [];
+    const searchTerms = query.toLowerCase().split(' ').filter(t => t.length > 2);
+
+    // Search in each collection
+    for (const coll of collectionsToSearch.filter(Boolean)) {
+      try {
+        const fileName = coll.fileName;
+        const [frenchData, arabicData] = await Promise.all([
+          loadCollectionData(fileName, 'fr'),
+          loadCollectionData(fileName, 'ar')
+        ]);
+
+        // Search in hadiths
+        const matches = frenchData.hadiths?.filter(hadith => {
+          const textToSearch = (hadith.text || '').toLowerCase();
+          return searchTerms.some(term => textToSearch.includes(term));
+        }) || [];
+
+        // Combine with Arabic data
+        const combinedMatches = matches.map(frenchHadith => {
+          const arabicHadith = arabicData.hadiths?.find(
+            h => h.hadithnumber === frenchHadith.hadithnumber
+          );
+          const combined = combineHadithData(frenchHadith, arabicHadith);
+
+          return {
+            collection: coll.key,
+            hadithNumber: frenchHadith.hadithnumber,
+            ...combined,
+            collectionInfo: {
+              name: frenchData.metadata?.name || coll.name,
+              key: coll.key,
+            },
+          };
+        });
+
+        allResults.push(...combinedMatches);
+      } catch (error) {
+        console.warn(`Error searching in ${coll.fileName}:`, error);
+      }
+    }
+
+    // Pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedResults = allResults.slice(startIndex, endIndex);
+
+    return {
+      results: paginatedResults,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(allResults.length / limit),
+        totalResults: allResults.length,
+      },
+    };
+  } catch (error) {
+    console.error(`Error searching hadiths for "${query}":`, error);
+    throw error;
+  }
+}
+```
+
+</CodeGroup>
+
+<Info>
+  Search splits the query into terms and filters out words shorter than 3 characters for better results.
+</Info>
+
+## Data Structures
+
+### Hadith Object
+
+```typescript TypeScript Interface
+interface Hadith {
+  hadithnumber: number;
+  arabicnumber: number;
+  hadithArabic: string;        // Arabic text
+  hadithFrench: string;        // French translation
+  text: string;                // Primary text
+  translations: {
+    ar: string;                // Arabic
+    fr: string;                // French
+    en: string;                // English
+  };
+  grades: Array<{
+    name: string;              // Scholar name
+    grade: string;             // Authenticity grade
+  }>;
+  reference: {
+    book: number;              // Book number
+    hadith: number;            // Hadith number in book
+  };
+  narrator: string;            // Primary narrator
+  grade: string;               // Main authenticity grade
+}
+```
+
+### Collection Metadata
+
+```typescript TypeScript Interface
+interface Collection {
+  key: string;                 // Unique identifier
+  name: string;                // Display name
+  fileName: string;            // File name for CDN
+  description: string;         // Description
+  numberOfHadith: number;      // Total hadith count
+  totalBooks: number;          // Number of books/sections
+}
+```
+
+## Helper Functions
+
+<Accordion title="Combine Hadith Data">
+  ```javascript
+  // Source: services/hadithService.jsx:211-230
+  const combineHadithData = (frenchHadith, arabicHadith) => {
+    if (!frenchHadith) return null;
+
+    return {
+      hadithnumber: frenchHadith.hadithnumber,
+      arabicnumber: frenchHadith.arabicnumber,
+      hadithArabic: arabicHadith?.text || '',
+      hadithFrench: frenchHadith.text || '',
+      text: frenchHadith.text,
+      translations: {
+        ar: arabicHadith?.text || '',
+        fr: frenchHadith.text || '',
+        en: frenchHadith.text || '',
+      },
+      grades: frenchHadith.grades || [],
+      reference: frenchHadith.reference || {},
+      narrator: extractNarrator(frenchHadith.text),
+      grade: getMainGrade(frenchHadith.grades),
+    };
+  };
+  ```
+</Accordion>
+
+<Accordion title="Extract Narrator">
+  ```javascript
+  // Source: services/hadithService.jsx:235-245
+  const extractNarrator = (text) => {
+    if (!text) return 'Not specified';
+
+    // Look for pattern "Narrated by X" or "Reported by X"
+    const match = text.match(/(?:Rapporté|Narré) par ([^:]+)/i);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+
+    return 'Not specified';
+  };
+  ```
+</Accordion>
+
+<Accordion title="Get Main Grade">
+  ```javascript
+  // Source: services/hadithService.jsx:250-259
+  const getMainGrade = (grades) => {
+    if (!grades || grades.length === 0) return 'Unclassified';
+
+    // Look for Al-Albani grade first
+    const albaniGrade = grades.find((g) => g.name === 'Al-Albani');
+    if (albaniGrade) return albaniGrade.grade;
+
+    // Otherwise return first grade
+    return grades[0].grade;
+  };
+  ```
+</Accordion>
+
+## UI Features
+
+### Favorites System
+
+Users can save favorite hadiths:
+
+```javascript Favorite Management
+// Source: screens/HadithScreen.jsx:179-201
+const toggleFavorite = async (hadith) => {
+  try {
+    const newFavorites = [...favorites];
+    const index = newFavorites.findIndex(fav =>
+      fav.collection === hadith.collection && 
+      fav.hadithNumber === hadith.hadithNumber
+    );
+
+    if (index === -1) {
+      // Add to favorites
+      newFavorites.push({
+        collection: hadith.collection,
+        hadithNumber: hadith.hadithNumber,
+        timestamp: Date.now()
+      });
+    } else {
+      // Remove from favorites
+      newFavorites.splice(index, 1);
+    }
+
+    setFavorites(newFavorites);
+    await AsyncStorage.setItem('@hadith_favorites', JSON.stringify(newFavorites));
+  } catch (error) {
+    console.error('Error modifying favorites:', error);
+  }
+};
+```
+
+### Hadith of the Day
+
+The home screen displays a random featured hadith that users can refresh:
+
+```javascript Featured Hadith
+// Source: screens/HadithScreen.jsx:150-177
+const refreshFeaturedHadith = async () => {
+  try {
+    setLoading(true);
+    const hadithResponse = await HadithService.getRandomHadith(selectedLanguage);
+
+    if (hadithResponse) {
+      let normalizedHadith = null;
+
+      // Normalize data structure
+      if (hadithResponse.hadith) {
+        normalizedHadith = hadithResponse.hadith;
+      } else if (hadithResponse.text) {
+        normalizedHadith = hadithResponse;
+      }
+
+      if (normalizedHadith) {
+        setFeaturedHadith(normalizedHadith);
+      }
+    }
+  } catch (error) {
+    console.error('Error refreshing hadith:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Efficient Loading" icon="gauge-high">
+    Use CDN caching and load hadiths on-demand rather than all at once
+  </Card>
+  <Card title="Multi-Language" icon="language">
+    Always load both Arabic and target language for complete context
+  </Card>
+  <Card title="Search Optimization" icon="magnifying-glass">
+    Filter short search terms and use pagination for large result sets
+  </Card>
+  <Card title="Offline Support" icon="download">
+    Cache frequently accessed collections in AsyncStorage
+  </Card>
+</CardGroup>
+
+## Related Features
+
+- [Quran Reading](/features/quran) - Read and study the Quran
+- [Dhikr Counter](/features/dhikr) - Count dhikr and remembrance
+- [Prayer Times](/features/prayer-times) - Daily prayer schedules

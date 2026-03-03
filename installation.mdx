@@ -1,0 +1,643 @@
+---
+title: Installation
+description: Complete guide to setting up AlXuraan for development, including prerequisites, dependencies, and platform-specific configuration
+---
+
+# Installation Guide
+
+This comprehensive guide covers everything you need to set up AlXuraan for development, from prerequisites to building for production.
+
+## Prerequisites
+
+### Required Software
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    **Version 18 or higher**
+    
+    Download from [nodejs.org](https://nodejs.org)
+    
+    Verify installation:
+    ```bash
+    node --version
+    npm --version
+    ```
+  </Card>
+  
+  <Card title="Expo CLI" icon="terminal">
+    **Latest version**
+    
+    Install globally (optional):
+    ```bash
+    npm install -g expo-cli
+    ```
+    
+    Or use npx (recommended)
+  </Card>
+  
+  <Card title="Git" icon="git-branch">
+    **For version control**
+    
+    Download from [git-scm.com](https://git-scm.com)
+    
+    Verify:
+    ```bash
+    git --version
+    ```
+  </Card>
+  
+  <Card title="Code Editor" icon="code">
+    **VS Code recommended**
+    
+    With extensions:
+    - React Native Tools
+    - Expo Tools
+    - ESLint
+    - Prettier
+  </Card>
+</CardGroup>
+
+### Platform-Specific Requirements
+
+<Tabs>
+  <Tab title="iOS Development">
+    <Steps>
+      <Step title="macOS Required">
+        iOS development requires a Mac computer running macOS.
+      </Step>
+      
+      <Step title="Install Xcode">
+        Download Xcode from the Mac App Store (latest version recommended).
+        
+        After installation, open Xcode and accept the license agreement:
+        ```bash
+        sudo xcodebuild -license
+        ```
+      </Step>
+      
+      <Step title="Install Command Line Tools">
+        ```bash
+        xcode-select --install
+        ```
+      </Step>
+      
+      <Step title="Install CocoaPods">
+        ```bash
+        sudo gem install cocoapods
+        ```
+        
+        Verify:
+        ```bash
+        pod --version
+        ```
+      </Step>
+      
+      <Step title="Install iOS Simulator">
+        Open Xcode > Preferences > Components and download iOS simulators for the versions you want to test.
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Android Development">
+    <Steps>
+      <Step title="Install Java Development Kit">
+        Install JDK 11 or higher:
+        ```bash
+        # macOS (using Homebrew)
+        brew install openjdk@11
+        
+        # Windows
+        # Download from Oracle or use Chocolatey
+        choco install openjdk11
+        ```
+      </Step>
+      
+      <Step title="Download Android Studio">
+        Download from [developer.android.com](https://developer.android.com/studio)
+        
+        Install with these components:
+        - Android SDK
+        - Android SDK Platform
+        - Android Virtual Device (AVD)
+      </Step>
+      
+      <Step title="Configure Android SDK">
+        Set environment variables:
+        
+        ```bash
+        # Add to ~/.bash_profile or ~/.zshrc
+        export ANDROID_HOME=$HOME/Library/Android/sdk
+        export PATH=$PATH:$ANDROID_HOME/emulator
+        export PATH=$PATH:$ANDROID_HOME/platform-tools
+        ```
+        
+        Reload your shell:
+        ```bash
+        source ~/.zshrc  # or ~/.bash_profile
+        ```
+      </Step>
+      
+      <Step title="Create Virtual Device">
+        Open Android Studio > AVD Manager > Create Virtual Device
+        
+        Recommended: Pixel 5 with latest Android version
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Project Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the AlXuraan repository:
+    
+    ```bash
+    git clone <repository-url>
+    cd alxuraan
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This installs the following key dependencies from `package.json`:
+    
+    <Accordion title="Core Dependencies">
+      ```json
+      {
+        "expo": "^53.0.12",
+        "react": "19.0.0",
+        "react-native": "0.79.4",
+        "@react-navigation/native": "^7.0.3",
+        "@react-navigation/bottom-tabs": "^7.0.5",
+        "@react-navigation/stack": "^7.0.4"
+      }
+      ```
+    </Accordion>
+    
+    <Accordion title="Expo Modules">
+      ```json
+      {
+        "expo-audio": "^1.0.13",
+        "expo-av": "^16.0.7",
+        "expo-location": "^18.0.5",
+        "expo-notifications": "~0.31.3",
+        "expo-sensors": "^14.0.2",
+        "expo-background-fetch": "^13.0.5",
+        "expo-task-manager": "~13.1.5"
+      }
+      ```
+    </Accordion>
+    
+    <Accordion title="UI & Styling">
+      ```json
+      {
+        "nativewind": "^4.1.21",
+        "tailwindcss": "3.4.4",
+        "lucide-react-native": "^0.474.0",
+        "@expo/vector-icons": "^14.0.0",
+        "expo-linear-gradient": "^14.0.2"
+      }
+      ```
+    </Accordion>
+    
+    <Accordion title="State & Data">
+      ```json
+      {
+        "zustand": "^4.5.1",
+        "@react-native-async-storage/async-storage": "2.1.2",
+        "axios": "^1.7.9",
+        "geolib": "^3.3.4"
+      }
+      ```
+    </Accordion>
+  </Step>
+
+  <Step title="Configure Environment">
+    The app uses `app.config.ts` for configuration. Review and update if needed:
+    
+    ```typescript
+    export default ({ config }: ConfigContext): ExpoConfig => ({
+      ...config,
+      name: 'alxuraan',
+      slug: 'alxuraan',
+      version: '1.0.0',
+      
+      // Enable new architecture
+      newArchEnabled: true,
+      
+      // Plugins configuration
+      plugins: [
+        ['expo-dev-launcher', { launchMode: 'most-recent' }],
+        ['expo-sensors', {
+          motionPermission: 'Allow $(PRODUCT_NAME) to access your device motion'
+        }],
+        ['expo-notifications']
+      ],
+      
+      // iOS configuration
+      ios: {
+        bundleIdentifier: 'com.devdiop.alxuraan',
+        supportsTablet: true,
+        infoPlist: {
+          UIBackgroundModes: ['audio']  // For background audio
+        }
+      },
+      
+      // Android configuration
+      android: {
+        package: 'com.devdiop.alxuraan',
+        adaptiveIcon: {
+          foregroundImage: './assets/adaptive-icon.png',
+          backgroundColor: '#ffffff'
+        }
+      }
+    });
+    ```
+  </Step>
+
+  <Step title="Verify Assets">
+    Ensure required assets are present:
+    
+    ```bash
+    assets/
+    ├── icon.png              # App icon (1024x1024)
+    ├── splash.png            # Splash screen
+    ├── adaptive-icon.png     # Android adaptive icon
+    ├── favicon.png           # Web favicon
+    ├── fonts/
+    │   ├── Poppins-Regular.ttf
+    │   ├── Poppins-Bold.ttf
+    │   ├── Poppins-Italic.ttf
+    │   └── Poppins-BoldItalic.ttf
+    └── images/
+        ├── stream-thumbnail-1.jpeg
+        └── stream-thumbnail-2.jpg
+    ```
+    
+    Fonts are loaded in `App.jsx`:
+    ```jsx
+    await Font.loadAsync({
+      'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+      'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+      'Poppins-Italic': require('./assets/fonts/Poppins-Italic.ttf'),
+      'Poppins-BoldItalic': require('./assets/fonts/Poppins-BoldItalic.ttf'),
+    });
+    ```
+  </Step>
+
+  <Step title="Generate Native Projects">
+    For development builds, generate native iOS and Android projects:
+    
+    ```bash
+    npm run prebuild
+    ```
+    
+    This runs `expo prebuild` and creates:
+    - `ios/` directory with Xcode project
+    - `android/` directory with Android Studio project
+    
+    <Warning>
+      The `ios/` and `android/` directories are typically gitignored. Only run prebuild when you need custom native code or development builds.
+    </Warning>
+  </Step>
+</Steps>
+
+## Development Builds
+
+For features like background audio, notifications, and sensors, you need development builds.
+
+### Using EAS Build
+
+AlXuraan uses EAS (Expo Application Services) for building. Configuration in `eas.json`:
+
+```json
+{
+  "cli": {
+    "version": ">= 10.2.4"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
+```
+
+<Steps>
+  <Step title="Install EAS CLI">
+    ```bash
+    npm install -g eas-cli
+    ```
+  </Step>
+
+  <Step title="Login to Expo">
+    ```bash
+    eas login
+    ```
+  </Step>
+
+  <Step title="Build Development Client">
+    For iOS:
+    ```bash
+    npm run build:dev
+    # or
+    eas build --profile development --platform ios
+    ```
+    
+    For Android:
+    ```bash
+    eas build --profile development --platform android
+    ```
+    
+    This creates a development build you can install on your device.
+  </Step>
+</Steps>
+
+### Local Development Builds
+
+Build locally without EAS:
+
+<CodeGroup>
+```bash iOS
+# Ensure you've run prebuild
+npm run prebuild
+
+# Build and run on iOS
+npm run ios
+
+# Or open in Xcode
+open ios/alxuraan.xcworkspace
+```
+
+```bash Android
+# Ensure you've run prebuild
+npm run prebuild
+
+# Build and run on Android
+npm run android
+
+# Or open in Android Studio
+open -a "Android Studio" android/
+```
+</CodeGroup>
+
+## Running the App
+
+### Development Server
+
+Start the Expo development server:
+
+```bash
+npm start
+```
+
+This runs `expo start --dev-client` and shows:
+- QR code for scanning with dev client
+- Options to run on iOS/Android
+- Metro bundler logs
+
+### Platform-Specific Commands
+
+<CodeGroup>
+```bash iOS
+# Run on iOS simulator
+npm run ios
+
+# Run on specific device
+npm run ios -- --device "My iPhone"
+
+# Run on specific simulator
+npm run ios -- --simulator="iPhone 15 Pro"
+```
+
+```bash Android  
+# Run on Android emulator or connected device
+npm run android
+
+# List available devices
+adb devices
+
+# Run on specific device
+npm run android -- --device <device-id>
+```
+
+```bash Web
+# Run on web (limited features)
+npm run web
+```
+</CodeGroup>
+
+## Code Quality Tools
+
+AlXuraan includes ESLint and Prettier for code quality:
+
+### ESLint Configuration
+
+From `package.json`:
+```json
+{
+  "eslintConfig": {
+    "extends": "universe/native",
+    "root": true
+  }
+}
+```
+
+### Running Linters
+
+```bash
+# Check for linting errors
+npm run lint
+
+# Auto-fix linting and formatting issues
+npm run format
+```
+
+### Prettier Configuration
+
+In `prettier.config.js`:
+```javascript
+module.exports = {
+  plugins: ['prettier-plugin-tailwindcss'],
+  // Additional Prettier settings
+};
+```
+
+## Production Builds
+
+Create optimized builds for distribution:
+
+### Preview Builds
+
+```bash
+npm run build:preview
+```
+
+Creates an internal distribution build for testing.
+
+### Production Builds
+
+```bash
+npm run build:prod
+```
+
+Creates production-ready builds for app stores.
+
+<Tabs>
+  <Tab title="iOS">
+    ```bash
+    # Production iOS build
+    eas build --profile production --platform ios
+    
+    # Submit to App Store
+    eas submit --platform ios
+    ```
+    
+    Requirements:
+    - Apple Developer account
+    - App Store Connect app created
+    - Valid provisioning profiles
+  </Tab>
+  
+  <Tab title="Android">
+    ```bash
+    # Production Android build
+    eas build --profile production --platform android
+    
+    # Submit to Play Store
+    eas submit --platform android
+    ```
+    
+    Requirements:
+    - Google Play Developer account
+    - App created in Play Console
+    - Signing key configured
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Metro bundler cache issues">
+    Clear all caches:
+    ```bash
+    npx expo start -c
+    watchman watch-del-all
+    rm -rf node_modules
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="iOS build fails with CocoaPods error">
+    ```bash
+    cd ios
+    pod deintegrate
+    pod install
+    cd ..
+    ```
+    
+    If still failing:
+    ```bash
+    sudo gem install cocoapods
+    pod repo update
+    ```
+  </Accordion>
+
+  <Accordion title="Android build fails with Gradle error">
+    ```bash
+    cd android
+    ./gradlew clean
+    cd ..
+    ```
+    
+    Clear Gradle cache:
+    ```bash
+    rm -rf ~/.gradle/caches/
+    ```
+  </Accordion>
+
+  <Accordion title="Fonts not loading">
+    Ensure fonts are in `assets/fonts/` and loaded in `App.jsx`:
+    ```jsx
+    await Font.loadAsync({
+      'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+      // ... other fonts
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Expo modules not recognized">
+    After adding new Expo modules:
+    ```bash
+    npx expo install
+    npx expo prebuild --clean
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Environment-Specific Notes
+
+### TypeScript Configuration
+
+The project uses TypeScript with `tsconfig.json`:
+```json
+{
+  "compilerOptions": {
+    "strict": true
+  },
+  "extends": "expo/tsconfig.base"
+}
+```
+
+Files can be `.tsx`, `.ts`, or `.jsx` - the app supports both.
+
+### Tailwind CSS (NativeWind)
+
+Configured in `tailwind.config.js` and `global.css`. NativeWind 4 provides Tailwind CSS for React Native.
+
+### Metro Configuration
+
+Custom Metro config in `metro.config.js` handles:
+- CSS imports
+- Asset resolution
+- Module resolution
+
+## Next Steps
+
+Now that you have a complete development environment:
+
+<CardGroup cols={2}>
+  <Card title="API Services" icon="plug" href="/services/quran-service">
+    Learn about Quran, Prayer Times, and Hadith services
+  </Card>
+  
+  <Card title="Component Library" icon="cube" href="/components/player">
+    Explore reusable UI components
+  </Card>
+  
+  <Card title="Navigation" icon="route" href="/development/navigation">
+    Understand the navigation structure
+  </Card>
+  
+  <Card title="State Management" icon="database" href="/development/state-management">
+    Learn about Zustand stores and Context
+  </Card>
+</CardGroup>
+
+<Tip>
+  Join the development workflow by exploring the services in `services/` and screens in `screens/`. The codebase is well-organized and easy to navigate!
+</Tip>

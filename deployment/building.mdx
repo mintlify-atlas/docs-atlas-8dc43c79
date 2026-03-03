@@ -1,0 +1,216 @@
+---
+title: 'Building AlXuraan'
+description: 'Build the AlXuraan app for development and production environments'
+---
+
+## Overview
+
+AlXuraan uses Expo's development build workflow, which provides a customizable development environment with native modules. This guide covers building the app for local development and preparing production builds.
+
+## Prerequisites
+
+Before building AlXuraan, ensure you have:
+
+- Node.js (v18 or higher)
+- npm or yarn package manager
+- Expo CLI installed globally: `npm install -g expo-cli`
+- For iOS builds: macOS with Xcode installed
+- For Android builds: Android Studio with SDK configured
+
+## Development Builds
+
+### Starting the Development Server
+
+AlXuraan uses Expo's development client for a custom development experience:
+
+```bash
+npm start
+```
+
+This command starts the Expo development server with the dev client enabled.
+
+### Running on iOS
+
+To build and run the app on iOS simulator or device:
+
+<Steps>
+  <Step title="Prebuild native projects">
+    Generate the native iOS project files:
+    
+    ```bash
+    npm run prebuild
+    ```
+    
+    This creates the `ios` and `android` directories with native code.
+  </Step>
+  
+  <Step title="Run iOS build">
+    Launch the app on iOS:
+    
+    ```bash
+    npm run ios
+    ```
+    
+    This compiles the native iOS code and launches the app in the iOS simulator.
+  </Step>
+</Steps>
+
+<Note>
+  The `expo run:ios` command automatically handles CocoaPods installation and native dependencies.
+</Note>
+
+### Running on Android
+
+To build and run the app on Android emulator or device:
+
+<Steps>
+  <Step title="Prebuild native projects (if not done)">
+    ```bash
+    npm run prebuild
+    ```
+  </Step>
+  
+  <Step title="Run Android build">
+    Launch the app on Android:
+    
+    ```bash
+    npm run android
+    ```
+    
+    This compiles the native Android code and launches the app in the Android emulator or connected device.
+  </Step>
+</Steps>
+
+<Warning>
+  Ensure Android Studio's SDK path is configured correctly in your environment variables before running Android builds.
+</Warning>
+
+## Build Scripts Reference
+
+AlXuraan's `package.json` includes the following build-related scripts:
+
+<CodeGroup>
+
+```json Development Scripts
+{
+  "start": "expo start --dev-client",
+  "ios": "expo run:ios",
+  "android": "expo run:android",
+  "prebuild": "expo prebuild"
+}
+```
+
+```json EAS Build Scripts
+{
+  "build:dev": "eas build --profile development",
+  "build:preview": "eas build --profile preview",
+  "build:prod": "eas build --profile production"
+}
+```
+
+```json Other Scripts
+{
+  "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
+  "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
+  "web": "expo start --web"
+}
+```
+
+</CodeGroup>
+
+## Expo Prebuild
+
+The `expo prebuild` command generates native `ios` and `android` directories from your Expo configuration:
+
+```bash
+npm run prebuild
+```
+
+### When to Run Prebuild
+
+Run `expo prebuild` when:
+
+- Setting up the project for the first time
+- Adding new native modules or Expo plugins
+- Updating Expo SDK version
+- Making changes to `app.config.ts` that affect native configuration
+
+<Info>
+  After running prebuild, the `ios` and `android` directories are generated. These are typically gitignored in Expo projects.
+</Info>
+
+## React Native New Architecture
+
+AlXuraan has the React Native New Architecture enabled in `app.config.ts`:
+
+```typescript
+{
+  newArchEnabled: true
+}
+```
+
+This enables:
+- **Turbo Modules**: Improved native module performance
+- **Fabric Renderer**: Better rendering performance
+- **Concurrent Features**: React 19 concurrent capabilities
+
+<Warning>
+  The New Architecture requires compatible versions of all native modules. Ensure all dependencies support the New Architecture.
+</Warning>
+
+## Web Development
+
+AlXuraan also supports web development:
+
+```bash
+npm run web
+```
+
+This starts the Expo web server and opens the app in your default browser.
+
+## Troubleshooting
+
+### Clear Metro Cache
+
+If you encounter build issues, clear the Metro bundler cache:
+
+```bash
+npm start -- --clear
+```
+
+### Clean Native Builds
+
+For iOS:
+```bash
+cd ios
+rm -rf build
+pod install
+cd ..
+```
+
+For Android:
+```bash
+cd android
+./gradlew clean
+cd ..
+```
+
+### Regenerate Native Projects
+
+To completely regenerate native projects:
+
+```bash
+rm -rf ios android
+npm run prebuild
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="EAS Build" icon="cloud" href="/deployment/eas-build">
+    Build your app in the cloud with EAS Build
+  </Card>
+  <Card title="App Store Publishing" icon="store" href="/deployment/app-stores">
+    Submit your app to Apple App Store and Google Play
+  </Card>
+</CardGroup>

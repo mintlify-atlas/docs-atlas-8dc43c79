@@ -1,0 +1,392 @@
+---
+title: Prayer Times Service
+description: Service for retrieving prayer times, managing location, and scheduling prayer notifications
+---
+
+The Prayer Times Service integrates with the Aladhan API to fetch prayer times based on user location and manages prayer notifications using Expo Notifications.
+
+## API Integration
+
+**Aladhan API**: `https://api.aladhan.com/v1/timings`
+
+The service uses the Aladhan API with customizable calculation methods for accurate prayer times worldwide.
+
+## Core Functions
+
+### getUserLocation()
+
+Requests location permissions and retrieves the user's current GPS coordinates.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+<ResponseField name="location" type="Object | null">
+  Location object or null if permission denied
+  
+  <ResponseField name="latitude" type="number">
+    Latitude coordinate
+  </ResponseField>
+  
+  <ResponseField name="longitude" type="number">
+    Longitude coordinate
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { getUserLocation } from '../services/prayerTimesService';
+
+const loadLocation = async () => {
+  const location = await getUserLocation();
+  if (location) {
+    console.log(`Lat: ${location.latitude}, Lng: ${location.longitude}`);
+  } else {
+    console.log('Location permission denied');
+  }
+};
+```
+
+```javascript From PrayerTimesScreen.jsx
+import { getUserLocation, getPrayerTimesByCoords } from '../services/prayerTimesService';
+
+const loadPrayerTimes = async () => {
+  try {
+    const location = await getUserLocation();
+    
+    if (location) {
+      const { latitude, longitude } = location;
+      const times = await getPrayerTimesByCoords(latitude, longitude);
+      setPrayerTimes(times);
+    } else {
+      setErrorMessage("Impossible d'obtenir votre localisation");
+    }
+  } catch (error) {
+    console.error('Error loading prayer times:', error);
+  }
+};
+```
+</CodeGroup>
+
+<Warning>
+This function requires location permissions. On first call, it will request `foreground` location permissions from the user.
+</Warning>
+
+---
+
+### getPrayerTimesByCoords(latitude, longitude, method)
+
+Fetches prayer times for a specific location using coordinates.
+
+<ParamField path="latitude" type="number" required>
+  Latitude coordinate
+</ParamField>
+
+<ParamField path="longitude" type="number" required>
+  Longitude coordinate
+</ParamField>
+
+<ParamField path="method" type="number" default={2}>
+  Calculation method:
+  - 1: Muslim World League (MWL)
+  - 2: Islamic Society of North America (ISNA)
+  - 3: Egyptian General Authority of Survey
+  - 4: Umm Al-Qura University, Makkah
+  - 5: University of Islamic Sciences, Karachi
+</ParamField>
+
+<ResponseField name="timings" type="Object">
+  Prayer times object with times in HH:MM format
+  
+  <ResponseField name="Fajr" type="string">
+    Dawn prayer time (e.g., "05:30")
+  </ResponseField>
+  
+  <ResponseField name="Dhuhr" type="string">
+    Noon prayer time
+  </ResponseField>
+  
+  <ResponseField name="Asr" type="string">
+    Afternoon prayer time
+  </ResponseField>
+  
+  <ResponseField name="Maghrib" type="string">
+    Sunset prayer time
+  </ResponseField>
+  
+  <ResponseField name="Isha" type="string">
+    Night prayer time
+  </ResponseField>
+  
+  <ResponseField name="Sunrise" type="string">
+    Sunrise time (for reference)
+  </ResponseField>
+  
+  <ResponseField name="Sunset" type="string">
+    Sunset time (for reference)
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { getPrayerTimesByCoords } from '../services/prayerTimesService';
+
+const times = await getPrayerTimesByCoords(14.6928, -17.4467, 2);
+console.log(times);
+// {
+//   Fajr: "05:30",
+//   Dhuhr: "13:15",
+//   Asr: "16:45",
+//   Maghrib: "19:30",
+//   Isha: "20:45",
+//   Sunrise: "06:45",
+//   Sunset: "19:30"
+// }
+```
+
+```javascript From PrayerTimesScreen.jsx
+const loadPrayerTimes = async () => {
+  try {
+    const location = await getUserLocation();
+    if (location) {
+      const { latitude, longitude } = location;
+      const times = await getPrayerTimesByCoords(latitude, longitude);
+      setPrayerTimes(times);
+      
+      if (notificationsEnabled) {
+        await schedulePrayerTimeNotifications(times);
+      }
+    }
+  } catch (error) {
+    console.error('Error loading prayer times:', error);
+  }
+};
+```
+</CodeGroup>
+
+---
+
+### schedulePrayerTimeNotifications(prayerTimes)
+
+Schedules push notifications for all five daily prayers and 15-minute reminders.
+
+<ParamField path="prayerTimes" type="Object" required>
+  Prayer times object from getPrayerTimesByCoords
+</ParamField>
+
+<Note>
+This function schedules TWO notifications per prayer:
+1. Main notification at prayer time
+2. Reminder notification 15 minutes before
+</Note>
+
+<CodeGroup>
+```javascript Usage Example
+import { 
+  getPrayerTimesByCoords, 
+  schedulePrayerTimeNotifications 
+} from '../services/prayerTimesService';
+
+const setupPrayerNotifications = async () => {
+  const times = await getPrayerTimesByCoords(14.6928, -17.4467);
+  await schedulePrayerTimeNotifications(times);
+  console.log('All prayer notifications scheduled');
+};
+```
+
+```javascript From PrayerTimesScreen.jsx
+const toggleNotifications = async (value) => {
+  try {
+    setNotificationsEnabled(value);
+    await AsyncStorage.setItem('notificationsEnabled', value.toString());
+    
+    if (value) {
+      await setupNotifications();
+      if (prayerTimes) {
+        await schedulePrayerTimeNotifications(prayerTimes);
+      }
+    } else {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
+  } catch (error) {
+    console.error('Error toggling notifications:', error);
+  }
+};
+```
+</CodeGroup>
+
+**Notification Details:**
+
+Each prayer gets two notifications:
+
+1. **At Prayer Time**:
+   - Title: `C'est l'heure de la prière: {Prayer Name}`
+   - Body: `Il est {time}`
+   - Sound: Enabled
+   - Priority: HIGH
+
+2. **15 Minutes Before**:
+   - Title: `Rappel: {Prayer Name} dans 15 minutes`
+   - Body: `La prière de {Prayer Name} est à {time}`
+   - Sound: Enabled
+   - Priority: HIGH
+
+<Warning>
+Calling this function cancels ALL previously scheduled notifications before scheduling new ones.
+</Warning>
+
+---
+
+### setupNotifications()
+
+Initializes the notification system and registers background tasks.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+```javascript
+import { setupNotifications } from '../services/prayerTimesService';
+
+await setupNotifications();
+// Notifications system ready
+```
+
+**What it does:**
+
+1. Configures notification handler for foreground notifications
+2. Creates Android notification channel "prayer-times"
+3. Registers background fetch task for auto-updating prayer times
+4. Sets vibration pattern and sound preferences
+
+<Note>
+Call this function once at app startup to initialize the notification system.
+</Note>
+
+---
+
+### registerBackgroundFetch()
+
+Registers a background task that updates prayer times every hour.
+
+```javascript
+import { registerBackgroundFetch } from '../services/prayerTimesService';
+
+await registerBackgroundFetch();
+```
+
+**Background Task Configuration:**
+- Runs every 60 minutes
+- Continues when app is terminated
+- Starts on device boot
+- Auto-updates location and prayer times
+- Reschedules notifications automatically
+
+---
+
+## Complete Integration Example
+
+Here's a full implementation from PrayerTimesScreen.jsx:
+
+```javascript PrayerTimesScreen.jsx
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  schedulePrayerTimeNotifications,
+  getUserLocation,
+  getPrayerTimesByCoords,
+  setupNotifications
+} from '../services/prayerTimesService';
+
+export default function PrayerTimesScreen() {
+  const [prayerTimes, setPrayerTimes] = useState(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  
+  useEffect(() => {
+    loadPrayerTimes();
+    loadNotificationSettings();
+  }, []);
+  
+  const loadNotificationSettings = async () => {
+    const enabled = await AsyncStorage.getItem('notificationsEnabled');
+    setNotificationsEnabled(enabled === 'true');
+  };
+  
+  const loadPrayerTimes = async () => {
+    try {
+      const location = await getUserLocation();
+      
+      if (location) {
+        const { latitude, longitude } = location;
+        const times = await getPrayerTimesByCoords(latitude, longitude);
+        setPrayerTimes(times);
+        
+        if (notificationsEnabled) {
+          await schedulePrayerTimeNotifications(times);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading prayer times:', error);
+    }
+  };
+  
+  const toggleNotifications = async (value) => {
+    setNotificationsEnabled(value);
+    await AsyncStorage.setItem('notificationsEnabled', value.toString());
+    
+    if (value) {
+      await setupNotifications();
+      if (prayerTimes) {
+        await schedulePrayerTimeNotifications(prayerTimes);
+      }
+    } else {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
+  };
+  
+  return (
+    <View>
+      {/* Display prayer times */}
+      {Object.entries(prayerTimes || {}).map(([name, time]) => (
+        <Text key={name}>{name}: {time}</Text>
+      ))}
+    </View>
+  );
+}
+```
+
+---
+
+## Error Handling
+
+All functions handle errors gracefully:
+
+```javascript
+try {
+  const times = await getPrayerTimesByCoords(lat, lng);
+} catch (error) {
+  // API error or network issue
+  console.error('Error fetching prayer times:', error);
+}
+```
+
+**Common Errors:**
+- Location permission denied → `getUserLocation()` returns `null`
+- Network error → `getPrayerTimesByCoords()` throws error
+- Invalid coordinates → API returns error response
+
+---
+
+## Calculation Methods Reference
+
+| Method | ID | Description | Region |
+|--------|----|--------------|---------|
+| MWL | 1 | Muslim World League | Europe, Americas |
+| ISNA | 2 | Islamic Society of North America | North America |
+| Egypt | 3 | Egyptian General Authority | Egypt, Levant |
+| Makkah | 4 | Umm Al-Qura University | Saudi Arabia |
+| Karachi | 5 | University of Islamic Sciences | Pakistan, India |
+
+<Note>
+Default method is ISNA (2). Choose the method that matches your region's calculation standards.
+</Note>

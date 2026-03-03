@@ -1,0 +1,329 @@
+---
+title: Quran Service
+description: API service for fetching Quran data including surahs, verses, translations, and audio
+---
+
+The Quran Service provides access to Quran data from multiple APIs, including Arabic text, French translations, Wolof translations, and audio recitations. It integrates with both QuranEnc.com and AlQuran.cloud APIs.
+
+## API Endpoints Used
+
+- **QuranEnc API**: `https://quranenc.com/api/v1/translation`
+- **AlQuran.cloud API**: `https://api.alquran.cloud/v1/surah`
+- **Audio API**: `https://api.alquran.cloud/v1/ayah`
+
+## Core Functions
+
+### getSuraNames()
+
+Retrieves the names of all 114 surahs in Arabic, French, and Wolof.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+<ResponseField name="formattedSuras" type="Array<Object>">
+  Array of surah objects with multilingual names and metadata
+  
+  <ResponseField name="id" type="number">
+    Surah number (1-114)
+  </ResponseField>
+  
+  <ResponseField name="name_ar" type="string">
+    Arabic name of the surah
+  </ResponseField>
+  
+  <ResponseField name="name_fr" type="string">
+    French name of the surah
+  </ResponseField>
+  
+  <ResponseField name="name_wo" type="string">
+    Wolof name of the surah
+  </ResponseField>
+  
+  <ResponseField name="verses" type="number">
+    Number of verses in the surah
+  </ResponseField>
+  
+  <ResponseField name="type" type="string">
+    Revelation type: "Mecquoise" or "Médinoise"
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    English description/meaning of the surah name
+  </ResponseField>
+  
+  <ResponseField name="hasWolofTranslation" type="boolean">
+    Whether Wolof translation is available
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { getSuraNames } from '../services/quranService';
+
+const loadSurahs = async () => {
+  const surahs = await getSuraNames();
+  console.log(surahs[0]);
+  // {
+  //   id: 1,
+  //   name_ar: "الفاتحة",
+  //   name_fr: "Al-Fatihah",
+  //   name_wo: "Sourate 1",
+  //   verses: 7,
+  //   type: "Mecquoise",
+  //   description: "The Opening",
+  //   hasWolofTranslation: true
+  // }
+};
+```
+
+```javascript From SurahsScreen.jsx
+// Real usage in the codebase
+const fetchSurahs = async () => {
+  try {
+    const response = await axios.get('https://api.alquran.cloud/v1/surah');
+    const sortedData = response.data.data.sort((a, b) => a.number - b.number);
+    setSurahs(sortedData);
+  } catch (error) {
+    console.error('Error fetching surahs:', error);
+  }
+};
+```
+</CodeGroup>
+
+---
+
+### getSuraTranslation(suraNumber)
+
+Retrieves the French translation of a specific surah with Wolof translations when available.
+
+<ParamField path="suraNumber" type="number" required>
+  Surah number between 1 and 114
+</ParamField>
+
+<ResponseField name="verses" type="Array<Object>">
+  Array of verse objects with translations
+  
+  <ResponseField name="id" type="number">
+    Verse ID/number
+  </ResponseField>
+  
+  <ResponseField name="aya" type="string">
+    Arabic text of the verse
+  </ResponseField>
+  
+  <ResponseField name="translation" type="string">
+    French translation (Hamidullah)
+  </ResponseField>
+  
+  <ResponseField name="audio_url" type="string">
+    URL for verse audio recitation
+  </ResponseField>
+  
+  <ResponseField name="wolof" type="string">
+    Wolof translation (if available)
+  </ResponseField>
+  
+  <ResponseField name="has_wolof" type="boolean">
+    Whether Wolof translation exists for this verse
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { getSuraTranslation } from '../services/quranService';
+
+const loadSurah = async () => {
+  const verses = await getSuraTranslation(1); // Al-Fatihah
+  console.log(verses[0]);
+  // {
+  //   id: 1,
+  //   aya: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+  //   translation: "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux",
+  //   audio_url: "https://api.alquran.cloud/v1/ayah/1:1/audio",
+  //   wolof: "Ci tur Yàlla...",
+  //   has_wolof: true
+  // }
+};
+```
+
+```javascript From SurahDetailScreen.jsx
+import { quranService } from '../services/quranService';
+
+const loadSurahDetails = async () => {
+  try {
+    const [surahData, versesData, translationData] = await Promise.all([
+      quranService.getSurahDetails(surahNumber),
+      quranService.getSurahVerses(surahNumber),
+      quranService.getSurahTranslation(surahNumber),
+    ]);
+    
+    setSurah(surahData);
+    setVerses(versesData);
+    setTranslations(translationData.ayahs);
+  } catch (err) {
+    console.error('Error loading surah:', err);
+  }
+};
+```
+</CodeGroup>
+
+---
+
+### getAyaTranslation(suraNumber, ayaNumber)
+
+Retrieves a specific verse with its translation and audio URL.
+
+<ParamField path="suraNumber" type="number" required>
+  Surah number (1-114)
+</ParamField>
+
+<ParamField path="ayaNumber" type="number" required>
+  Verse number within the surah
+</ParamField>
+
+<ResponseField name="verse" type="Object">
+  Single verse object
+  
+  <ResponseField name="aya" type="string">
+    Arabic text
+  </ResponseField>
+  
+  <ResponseField name="translation" type="string">
+    French translation
+  </ResponseField>
+  
+  <ResponseField name="audio_url" type="string">
+    Audio recitation URL
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { getAyaTranslation } from '../services/quranService';
+
+const loadVerse = async () => {
+  // Get Al-Fatihah, verse 1
+  const verse = await getAyaTranslation(1, 1);
+  console.log(verse.translation);
+  // "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux"
+};
+```
+</CodeGroup>
+
+---
+
+## Utility Functions
+
+### isValidSuraNumber(suraNumber)
+
+Validates if a surah number is valid (1-114).
+
+<ParamField path="suraNumber" type="number" required>
+  Number to validate
+</ParamField>
+
+<ResponseField name="valid" type="boolean">
+  True if valid surah number, false otherwise
+</ResponseField>
+
+```javascript
+import { isValidSuraNumber } from '../services/quranService';
+
+if (isValidSuraNumber(115)) {
+  // false - only 114 surahs exist
+}
+```
+
+---
+
+### getVerseCount(suraNumber)
+
+Returns the number of verses in a specific surah.
+
+<ParamField path="suraNumber" type="number" required>
+  Surah number (1-114)
+</ParamField>
+
+<ResponseField name="count" type="number">
+  Number of verses, or 0 if invalid surah
+</ResponseField>
+
+```javascript
+import { getVerseCount } from '../services/quranService';
+
+const verses = getVerseCount(1); // Returns 7 (Al-Fatihah has 7 verses)
+const invalid = getVerseCount(115); // Returns 0
+```
+
+---
+
+### hasWolofTranslation(suraNumber)
+
+Checks if a surah has Wolof translation available.
+
+<ParamField path="suraNumber" type="number" required>
+  Surah number to check
+</ParamField>
+
+<ResponseField name="available" type="boolean">
+  True if Wolof translation exists
+</ResponseField>
+
+```javascript
+import { hasWolofTranslation } from '../services/quranService';
+
+if (hasWolofTranslation(1)) {
+  // Display Wolof translation option
+}
+```
+
+---
+
+## Constants
+
+### VERSE_COUNTS
+
+Object mapping surah numbers to their verse counts.
+
+```javascript
+import { VERSE_COUNTS } from '../services/quranService';
+
+console.log(VERSE_COUNTS[1]); // 7
+console.log(VERSE_COUNTS[2]); // 286 (Al-Baqarah)
+```
+
+---
+
+## Error Handling
+
+All async functions return empty arrays or null on error and log to console:
+
+```javascript
+try {
+  const verses = await getSuraTranslation(1);
+  if (verses.length === 0) {
+    // Handle error - check console for details
+  }
+} catch (error) {
+  console.error('Error:', error);
+}
+```
+
+<Note>
+The service caches Wolof translations in memory for performance. The cache is initialized on first access.
+</Note>
+
+<Warning>
+Parameter validation is performed for all functions. Invalid surah or verse numbers will throw errors.
+</Warning>
+
+## Audio Playback
+
+Audio URLs are automatically generated for each verse:
+
+```javascript
+const audioUrl = `https://api.alquran.cloud/v1/ayah/${suraNumber}:${verseNumber}/audio`;
+```
+
+These URLs can be used with the Player context or React Native's audio components.

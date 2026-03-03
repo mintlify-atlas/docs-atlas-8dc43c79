@@ -1,0 +1,446 @@
+---
+title: 'Dhikr Counter'
+description: 'Digital tasbih counter for remembrance of Allah with preset dhikr collections'
+---
+
+## Overview
+
+The Dhikr Counter feature provides a digital tasbih (prayer beads) for counting remembrance of Allah. It includes preset collections for the 99 Names of Allah, morning and evening adhkar, and post-prayer dhikr with customizable counters and progress tracking.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Digital Tasbih" icon="hand-dots">
+    Touch-based counter with vibration feedback
+  </Card>
+  <Card title="99 Names of Allah" icon="mosque">
+    Complete collection with meanings and transliterations
+  </Card>
+  <Card title="Daily Adhkar" icon="sun">
+    Morning and evening remembrance collections
+  </Card>
+  <Card title="Prayer Dhikr" icon="hands-praying">
+    Post-prayer dhikr with repetition tracking
+  </Card>
+</CardGroup>
+
+## Dhikr Service API
+
+The dhikr service provides access to various categories of remembrance:
+
+<CodeGroup>
+
+```javascript Get Allah Names
+// Source: services/dhikrService.jsx:7-24
+const dhikrService = {
+  // Get the 99 Names of Allah
+  getAllahNames: async () => {
+    try {
+      const response = await axios.get('https://api.example.com/allah-names');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Allah names:', error);
+
+      // Fallback to local data
+      return [
+        { 
+          id: 1, 
+          arabic: 'الرَّحْمَنُ', 
+          transliteration: 'Ar-Rahman', 
+          meaning: 'Le Tout Miséricordieux' 
+        },
+        { 
+          id: 2, 
+          arabic: 'الرَّحِيمُ', 
+          transliteration: 'Ar-Rahim', 
+          meaning: 'Le Très Miséricordieux' 
+        },
+        // ... other names
+      ];
+    }
+  },
+};
+```
+
+```javascript Morning Dhikr
+// Source: services/dhikrService.jsx:26-39
+getMorningDhikrs: async () => {
+  return [
+    {
+      id: 1,
+      arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ...',
+      transliteration: 'Asbahna wa asbahal mulku lillah...',
+      translation: 'Nous voilà au matin et à ce matin la royauté appartient à Allah...',
+      repetitions: 1
+    },
+    // ... other morning dhikrs
+  ];
+}
+```
+
+```javascript Evening Dhikr
+// Source: services/dhikrService.jsx:41-54
+getEveningDhikrs: async () => {
+  return [
+    {
+      id: 1,
+      arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ...',
+      transliteration: 'Amsayna wa amsal mulku lillah...',
+      translation: 'Nous voilà au soir et ce soir la royauté appartient à Allah...',
+      repetitions: 1
+    },
+    // ... other evening dhikrs
+  ];
+}
+```
+
+```javascript Prayer Dhikr
+// Source: services/dhikrService.jsx:56-68
+getPrayerDhikrs: async () => {
+  return [
+    {
+      id: 1,
+      arabic: 'أَسْتَغْفِرُ اللَّهَ',
+      transliteration: 'Astaghfirullah',
+      translation: 'Je demande pardon à Allah',
+      repetitions: 3
+    },
+    // ... other prayer dhikrs
+  ];
+}
+```
+
+</CodeGroup>
+
+## Data Structures
+
+### Dhikr Object
+
+```typescript TypeScript Interface
+interface Dhikr {
+  id: number;
+  arabic: string;              // Arabic text
+  transliteration: string;     // Romanized pronunciation
+  translation: string;         // French/English meaning
+  repetitions: number;         // Recommended repetition count
+  category?: string;           // 'morning' | 'evening' | 'prayer'
+}
+```
+
+### Allah Name Object
+
+```typescript TypeScript Interface
+interface AllahName {
+  id: number;                  // Name number (1-99)
+  arabic: string;              // Arabic name (e.g., 'الرَّحْمَنُ')
+  transliteration: string;     // Romanized (e.g., 'Ar-Rahman')
+  meaning: string;             // Translation/meaning
+}
+```
+
+## Common Dhikr Collections
+
+### Post-Prayer Dhikr
+
+Traditional dhikr after completing obligatory prayers:
+
+<Steps>
+  <Step title="Astaghfirullah (3x)">
+    أَسْتَغْفِرُ اللَّهَ - "I seek forgiveness from Allah"
+  </Step>
+  <Step title="Ayat al-Kursi (1x)">
+    Recitation of the Throne Verse (Quran 2:255)
+  </Step>
+  <Step title="Tasbih (33x)">
+    سُبْحَانَ اللَّهِ - "Glory be to Allah" (Subhan Allah)
+  </Step>
+  <Step title="Tahmid (33x)">
+    الْحَمْدُ لِلَّهِ - "Praise be to Allah" (Alhamdulillah)
+  </Step>
+  <Step title="Takbir (34x)">
+    اللَّهُ أَكْبَرُ - "Allah is the Greatest" (Allahu Akbar)
+  </Step>
+</Steps>
+
+### Morning Adhkar
+
+Dhikr recited after Fajr prayer:
+
+```javascript Common Morning Dhikr
+const morningAdhkar = [
+  {
+    arabic: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ',
+    transliteration: 'Asbahna wa asbahal-mulku lillah',
+    translation: 'We have entered morning and the dominion belongs to Allah',
+    repetitions: 1
+  },
+  {
+    arabic: 'اللَّهُمَّ بِكَ أَصْبَحْنَا',
+    transliteration: 'Allahumma bika asbahna',
+    translation: 'O Allah, by You we enter the morning',
+    repetitions: 1
+  },
+  {
+    arabic: 'أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ',
+    transliteration: "A'udhu billahi minash-shaytanir-rajim",
+    translation: 'I seek refuge in Allah from the accursed Satan',
+    repetitions: 3
+  }
+];
+```
+
+### Evening Adhkar
+
+Dhikr recited after Maghrib prayer:
+
+```javascript Common Evening Dhikr
+const eveningAdhkar = [
+  {
+    arabic: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ',
+    transliteration: 'Amsayna wa amsal-mulku lillah',
+    translation: 'We have entered evening and the dominion belongs to Allah',
+    repetitions: 1
+  },
+  {
+    arabic: 'اللَّهُمَّ بِكَ أَمْسَيْنَا',
+    transliteration: 'Allahumma bika amsayna',
+    translation: 'O Allah, by You we enter the evening',
+    repetitions: 1
+  }
+];
+```
+
+## Counter Implementation
+
+Typical counter UI implementation:
+
+```javascript Counter Component
+import { useState } from 'react';
+import { View, TouchableOpacity, Text, Vibration } from 'react-native';
+
+const DhikrCounter = ({ dhikr }) => {
+  const [count, setCount] = useState(0);
+  const target = dhikr.repetitions;
+
+  const handlePress = () => {
+    if (count < target) {
+      setCount(count + 1);
+      Vibration.vibrate(50); // Haptic feedback
+    }
+  };
+
+  const reset = () => {
+    setCount(0);
+  };
+
+  const isComplete = count >= target;
+
+  return (
+    <View>
+      <Text>{dhikr.arabic}</Text>
+      <Text>{dhikr.transliteration}</Text>
+      <Text>{dhikr.translation}</Text>
+      
+      <TouchableOpacity 
+        onPress={handlePress}
+        disabled={isComplete}
+      >
+        <Text>{count} / {target}</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity onPress={reset}>
+        <Text>Reset</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+```
+
+## Features to Implement
+
+### Progress Tracking
+
+<Tabs>
+  <Tab title="Daily Progress">
+    Track daily dhikr completion and streaks
+    ```javascript
+    {
+      date: '2026-03-03',
+      morning: { completed: true, count: 15 },
+      evening: { completed: false, count: 8 },
+      prayer: { completed: true, count: 100 }
+    }
+    ```
+  </Tab>
+  <Tab title="Statistics">
+    Show lifetime statistics and achievements
+    ```javascript
+    {
+      totalDhikr: 50000,
+      currentStreak: 30,
+      longestStreak: 90,
+      favorites: ['Subhan Allah', 'Alhamdulillah']
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Custom Dhikr
+
+Allow users to create custom dhikr:
+
+```javascript Custom Dhikr
+const createCustomDhikr = async (dhikr) => {
+  const customDhikr = {
+    id: Date.now(),
+    arabic: dhikr.arabic,
+    transliteration: dhikr.transliteration,
+    translation: dhikr.translation,
+    repetitions: dhikr.repetitions || 33,
+    isCustom: true
+  };
+
+  const existing = await AsyncStorage.getItem('@custom_dhikr');
+  const customList = existing ? JSON.parse(existing) : [];
+  customList.push(customDhikr);
+  
+  await AsyncStorage.setItem('@custom_dhikr', JSON.stringify(customList));
+  return customDhikr;
+};
+```
+
+### Notifications
+
+Remind users to recite morning and evening adhkar:
+
+```javascript Dhikr Notifications
+import * as Notifications from 'expo-notifications';
+
+const scheduleDhikrReminders = async () => {
+  // Morning reminder after Fajr
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Morning Adhkar',
+      body: 'Time to recite your morning remembrance',
+      sound: true,
+    },
+    trigger: {
+      hour: 7,  // 7 AM
+      minute: 0,
+      repeats: true
+    },
+  });
+
+  // Evening reminder after Maghrib
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Evening Adhkar',
+      body: 'Time to recite your evening remembrance',
+      sound: true,
+    },
+    trigger: {
+      hour: 18,  // 6 PM
+      minute: 30,
+      repeats: true
+    },
+  });
+};
+```
+
+## UI/UX Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Haptic Feedback" icon="mobile-screen">
+    Provide vibration feedback on each count for tactile confirmation
+  </Card>
+  <Card title="Visual Progress" icon="chart-simple">
+    Show circular progress indicators for repetition tracking
+  </Card>
+  <Card title="Easy Reset" icon="rotate-right">
+    Allow quick reset without confirmation for smooth workflow
+  </Card>
+  <Card title="Dark Mode" icon="moon">
+    Optimize for low-light usage during night prayers
+  </Card>
+</CardGroup>
+
+## Storage Strategy
+
+### Save Counter State
+
+```javascript Persist Counter
+const saveCounterState = async (dhikrId, count) => {
+  const key = `@dhikr_count_${dhikrId}`;
+  await AsyncStorage.setItem(key, JSON.stringify({
+    count,
+    timestamp: Date.now()
+  }));
+};
+
+const loadCounterState = async (dhikrId) => {
+  const key = `@dhikr_count_${dhikrId}`;
+  const data = await AsyncStorage.getItem(key);
+  return data ? JSON.parse(data) : { count: 0 };
+};
+```
+
+### Daily Statistics
+
+```javascript Track Daily Stats
+const updateDailyStats = async (category, count) => {
+  const today = new Date().toISOString().split('T')[0];
+  const key = `@dhikr_stats_${today}`;
+  
+  const existing = await AsyncStorage.getItem(key);
+  const stats = existing ? JSON.parse(existing) : {};
+  
+  stats[category] = (stats[category] || 0) + count;
+  stats.total = (stats.total || 0) + count;
+  
+  await AsyncStorage.setItem(key, JSON.stringify(stats));
+};
+```
+
+## Integration Examples
+
+### With Prayer Times
+
+Show relevant dhikr after prayer notifications:
+
+```javascript Post-Prayer Dhikr
+Notifications.addNotificationResponseReceivedListener(response => {
+  if (response.notification.request.content.categoryIdentifier === 'prayer') {
+    // Navigate to prayer dhikr screen
+    navigation.navigate('Dhikr', { 
+      category: 'prayer',
+      prayer: response.notification.request.content.data.prayerName 
+    });
+  }
+});
+```
+
+### With Qibla
+
+Quick access to dhikr from Qibla screen:
+
+```javascript Qibla Integration
+const QiblaScreen = () => {
+  return (
+    <View>
+      {/* Qibla compass */}
+      <CompassView />
+      
+      {/* Quick dhikr button */}
+      <TouchableOpacity onPress={() => navigation.navigate('Dhikr')}>
+        <Text>Start Dhikr</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+```
+
+## Related Features
+
+- [Prayer Times](/features/prayer-times) - Receive prayer reminders
+- [Quran Reading](/features/quran) - Read Quran verses
+- [Hadith Collections](/features/hadith) - Learn from hadith about dhikr

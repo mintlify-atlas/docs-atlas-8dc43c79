@@ -1,0 +1,672 @@
+---
+title: Hadith Service
+description: Service for accessing hadith collections including Bukhari, Muslim, and other authentic collections
+---
+
+The Hadith Service provides access to major hadith collections with support for Arabic and French translations. It uses CDN-hosted JSON data with intelligent caching for optimal performance.
+
+## Available Collections
+
+The service provides access to 9 major hadith collections:
+
+<CardGroup cols={2}>
+  <Card title="Sahih al-Bukhari" icon="book">
+    The most authentic collection of hadiths
+    - Key: `sahih-al-bukhari`
+    - File: `bukhari`
+  </Card>
+  
+  <Card title="Sahih Muslim" icon="book">
+    The second most authentic collection
+    - Key: `sahih-muslim`
+    - File: `muslim`
+  </Card>
+  
+  <Card title="Sunan Abu Dawood" icon="book">
+    Important collection of juridical hadiths
+    - Key: `sunan-abu-dawood`
+    - File: `abudawud`
+  </Card>
+  
+  <Card title="Sunan an-Nasa'i" icon="book">
+    Collection on Islamic jurisprudence
+    - Key: `sunan-an-nasai`
+    - File: `nasai`
+  </Card>
+  
+  <Card title="Sunan Ibn Majah" icon="book">
+    One of the six canonical collections
+    - Key: `sunan-ibn-majah`
+    - File: `ibnmajah`
+  </Card>
+  
+  <Card title="Muwatta Malik" icon="book">
+    One of the earliest hadith compilations
+    - Key: `malik`
+    - File: `malik`
+  </Card>
+  
+  <Card title="40 Hadiths Nawawi" icon="book">
+    40 foundational Islamic hadiths
+    - Key: `nawawi`
+    - File: `nawawi`
+  </Card>
+  
+  <Card title="Hadith Qudsi" icon="book">
+    Sacred sayings transmitted by the Prophet
+    - Key: `qudsi`
+    - File: `qudsi`
+  </Card>
+  
+  <Card title="40 Hadiths Dehlawi" icon="book">
+    Selected collection of 40 hadiths
+    - Key: `dehlawi`
+    - File: `dehlawi`
+  </Card>
+</CardGroup>
+
+---
+
+## Core Functions
+
+### getCollections()
+
+Returns all available hadith collections with metadata.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+<ResponseField name="collections" type="Array<Object>">
+  Array of collection objects
+  
+  <ResponseField name="name" type="string">
+    Display name of the collection
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    Brief description of the collection
+  </ResponseField>
+  
+  <ResponseField name="key" type="string">
+    Unique identifier for API calls
+  </ResponseField>
+  
+  <ResponseField name="fileName" type="string">
+    Internal file name
+  </ResponseField>
+  
+  <ResponseField name="numberOfHadith" type="number">
+    Total number of hadiths in collection
+  </ResponseField>
+  
+  <ResponseField name="totalBooks" type="number">
+    Number of books/chapters in collection
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import HadithService from '../services/hadithService';
+
+const loadCollections = async () => {
+  const { collections } = await HadithService.getCollections();
+  
+  collections.forEach(collection => {
+    console.log(`${collection.name}: ${collection.numberOfHadith} hadiths`);
+  });
+};
+```
+
+```javascript Response Example
+{
+  collections: [
+    {
+      name: "Sahih al-Bukhari",
+      description: "La collection la plus authentique de hadiths",
+      key: "sahih-al-bukhari",
+      fileName: "bukhari",
+      numberOfHadith: 7563,
+      totalBooks: 97
+    },
+    // ... more collections
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+### getCollection(collectionKey)
+
+Retrieves metadata and chapter structure for a specific collection.
+
+<ParamField path="collectionKey" type="string" required>
+  Collection identifier (e.g., "sahih-al-bukhari")
+</ParamField>
+
+<ResponseField name="collection" type="Object">
+  Collection metadata object
+  
+  <ResponseField name="name" type="string">
+    Collection name
+  </ResponseField>
+  
+  <ResponseField name="sections" type="Object">
+    Mapping of section IDs to section names
+  </ResponseField>
+  
+  <ResponseField name="section_details" type="Object">
+    Detailed information about each section
+  </ResponseField>
+  
+  <ResponseField name="totalHadith" type="number">
+    Total number of hadiths
+  </ResponseField>
+</ResponseField>
+
+```javascript
+import HadithService from '../services/hadithService';
+
+const collection = await HadithService.getCollection('sahih-al-bukhari');
+console.log(collection.sections);
+// { "1": "Revelation", "2": "Belief", ... }
+```
+
+---
+
+### getHadithByNumber(collectionKey, hadithNumber, options)
+
+Retrieves a specific hadith by its number with Arabic and French translations.
+
+<ParamField path="collectionKey" type="string" required>
+  Collection identifier
+</ParamField>
+
+<ParamField path="hadithNumber" type="number" required>
+  Hadith number within the collection
+</ParamField>
+
+<ParamField path="options" type="Object">
+  Optional configuration
+  
+  <ParamField path="options.language" type="string" default="fr">
+    Preferred language: "fr", "ar", or "en"
+  </ParamField>
+</ParamField>
+
+<ResponseField name="hadith" type="Object">
+  Complete hadith object
+  
+  <ResponseField name="collection" type="string">
+    Collection key
+  </ResponseField>
+  
+  <ResponseField name="hadithNumber" type="number">
+    Hadith number
+  </ResponseField>
+  
+  <ResponseField name="hadithArabic" type="string">
+    Arabic text
+  </ResponseField>
+  
+  <ResponseField name="hadithFrench" type="string">
+    French translation
+  </ResponseField>
+  
+  <ResponseField name="narrator" type="string">
+    Name of the narrator
+  </ResponseField>
+  
+  <ResponseField name="grade" type="string">
+    Authenticity grade (e.g., "Sahih")
+  </ResponseField>
+  
+  <ResponseField name="grades" type="Array<Object>">
+    Detailed grading information from scholars
+  </ResponseField>
+  
+  <ResponseField name="reference" type="Object">
+    Book and chapter references
+  </ResponseField>
+  
+  <ResponseField name="collectionInfo" type="Object">
+    Parent collection metadata
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import HadithService from '../services/hadithService';
+
+const hadith = await HadithService.getHadithByNumber(
+  'sahih-al-bukhari',
+  1,
+  { language: 'fr' }
+);
+
+console.log(hadith.hadithFrench);
+console.log(`Grade: ${hadith.grade}`);
+console.log(`Narrator: ${hadith.narrator}`);
+```
+
+```javascript Response Example
+{
+  collection: "sahih-al-bukhari",
+  hadithNumber: 1,
+  hadithArabic: "إنما الأعمال بالنيات...",
+  hadithFrench: "Les actions ne valent que par les intentions...",
+  narrator: "Omar ibn Al-Khattab",
+  grade: "Sahih",
+  grades: [
+    { name: "Al-Albani", grade: "Sahih" }
+  ],
+  reference: { book: 1, hadith: 1 },
+  collectionInfo: {
+    name: "Sahih al-Bukhari",
+    key: "sahih-al-bukhari"
+  }
+}
+```
+</CodeGroup>
+
+---
+
+### getRandomHadith()
+
+Returns a random hadith from any available collection.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+<ResponseField name="hadith" type="Object">
+  Random hadith with all translations and metadata
+  
+  <ResponseField name="id" type="string">
+    Unique identifier (collection-hadithNumber)
+  </ResponseField>
+  
+  <ResponseField name="collection" type="string">
+    Collection name
+  </ResponseField>
+  
+  <ResponseField name="collectionKey" type="string">
+    Collection identifier
+  </ResponseField>
+  
+  <ResponseField name="book" type="string">
+    Book/chapter name
+  </ResponseField>
+  
+  <ResponseField name="chapter" type="string">
+    Chapter/section name
+  </ResponseField>
+  
+  <ResponseField name="hadithArabic" type="string">
+    Arabic text
+  </ResponseField>
+  
+  <ResponseField name="hadithFrench" type="string">
+    French translation
+  </ResponseField>
+</ResponseField>
+
+```javascript
+import HadithService from '../services/hadithService';
+
+const displayRandomHadith = async () => {
+  const { hadith } = await HadithService.getRandomHadith();
+  
+  console.log(`Collection: ${hadith.collection}`);
+  console.log(`Chapter: ${hadith.chapter}`);
+  console.log(hadith.hadithFrench);
+};
+```
+
+<Note>
+Perfect for "Hadith of the Day" features or random hadith display widgets.
+</Note>
+
+---
+
+### searchHadiths(query, options)
+
+Searches for hadiths containing specific terms across all or specific collections.
+
+<ParamField path="query" type="string" required>
+  Search query (words longer than 2 characters)
+</ParamField>
+
+<ParamField path="options" type="Object">
+  Search options
+  
+  <ParamField path="options.language" type="string" default="fr">
+    Language to search in
+  </ParamField>
+  
+  <ParamField path="options.collection" type="string">
+    Specific collection to search (empty = all collections)
+  </ParamField>
+  
+  <ParamField path="options.page" type="number" default={1}>
+    Page number for pagination
+  </ParamField>
+  
+  <ParamField path="options.limit" type="number" default={10}>
+    Results per page
+  </ParamField>
+</ParamField>
+
+<ResponseField name="results" type="Array<Object>">
+  Array of matching hadiths
+</ResponseField>
+
+<ResponseField name="pagination" type="Object">
+  Pagination information
+  
+  <ResponseField name="currentPage" type="number">
+    Current page number
+  </ResponseField>
+  
+  <ResponseField name="totalPages" type="number">
+    Total number of pages
+  </ResponseField>
+  
+  <ResponseField name="totalResults" type="number">
+    Total number of matching hadiths
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Basic Search
+import HadithService from '../services/hadithService';
+
+const results = await HadithService.searchHadiths('prière', {
+  page: 1,
+  limit: 10
+});
+
+console.log(`Found ${results.pagination.totalResults} hadiths`);
+results.results.forEach(hadith => {
+  console.log(hadith.hadithFrench);
+});
+```
+
+```javascript Search Specific Collection
+const results = await HadithService.searchHadiths('intentions', {
+  collection: 'sahih-al-bukhari',
+  page: 1,
+  limit: 20
+});
+```
+
+```javascript Response Example
+{
+  results: [
+    {
+      collection: "sahih-al-bukhari",
+      hadithNumber: 1,
+      hadithArabic: "إنما الأعمال بالنيات...",
+      hadithFrench: "Les actions ne valent que par les intentions...",
+      narrator: "Omar ibn Al-Khattab",
+      grade: "Sahih"
+    },
+    // ... more results
+  ],
+  pagination: {
+    currentPage: 1,
+    totalPages: 5,
+    totalResults: 47
+  }
+}
+```
+</CodeGroup>
+
+<Warning>
+Search terms shorter than 3 characters are ignored for performance reasons.
+</Warning>
+
+---
+
+### getCollectionChapters(collectionKey)
+
+Retrieves all chapters/books for a specific collection.
+
+<ParamField path="collectionKey" type="string" required>
+  Collection identifier
+</ParamField>
+
+<ResponseField name="books" type="Array<Object>">
+  Array of chapter/book objects
+  
+  <ResponseField name="id" type="number">
+    Chapter ID
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Chapter name
+  </ResponseField>
+  
+  <ResponseField name="numberOfHadith" type="number">
+    Number of hadiths in this chapter
+  </ResponseField>
+  
+  <ResponseField name="details" type="Object">
+    Additional chapter metadata
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="collection" type="Object">
+  Parent collection info
+</ResponseField>
+
+```javascript
+import HadithService from '../services/hadithService';
+
+const { books, collection } = await HadithService.getCollectionChapters(
+  'sahih-al-bukhari'
+);
+
+books.forEach(book => {
+  console.log(`${book.name}: ${book.numberOfHadith} hadiths`);
+});
+```
+
+---
+
+### getHadithsByChapter(collectionKey, chapterId, options)
+
+Retrieves all hadiths from a specific chapter with pagination.
+
+<ParamField path="collectionKey" type="string" required>
+  Collection identifier
+</ParamField>
+
+<ParamField path="chapterId" type="number" required>
+  Chapter/book ID
+</ParamField>
+
+<ParamField path="options" type="Object">
+  Query options
+  
+  <ParamField path="options.language" type="string" default="fr">
+    Language preference
+  </ParamField>
+  
+  <ParamField path="options.page" type="number" default={1}>
+    Page number
+  </ParamField>
+  
+  <ParamField path="options.limit" type="number" default={20}>
+    Results per page
+  </ParamField>
+</ParamField>
+
+<ResponseField name="hadiths" type="Array<Object>">
+  Array of hadiths from the chapter
+</ResponseField>
+
+<ResponseField name="pagination" type="Object">
+  Pagination metadata
+</ResponseField>
+
+<ResponseField name="chapter" type="Object">
+  Chapter information
+  
+  <ResponseField name="id" type="number">
+    Chapter ID
+  </ResponseField>
+  
+  <ResponseField name="name" type="string">
+    Chapter name
+  </ResponseField>
+  
+  <ResponseField name="details" type="Object">
+    Chapter metadata
+  </ResponseField>
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import HadithService from '../services/hadithService';
+
+const { hadiths, pagination, chapter } = await HadithService.getHadithsByChapter(
+  'sahih-al-bukhari',
+  1, // Chapter 1: Revelation
+  { page: 1, limit: 20 }
+);
+
+console.log(`Chapter: ${chapter.name}`);
+console.log(`Page ${pagination.currentPage} of ${pagination.totalPages}`);
+```
+
+```javascript From HadithCollectionScreen.jsx
+const loadHadiths = async (pageNumber = 1) => {
+  try {
+    const response = await HadithService.getHadithsByChapter(
+      collectionKey,
+      bookId,
+      {
+        language: selectedLanguage,
+        page: pageNumber,
+        limit: 20
+      }
+    );
+    
+    setHadiths(prev => [...prev, ...response.hadiths]);
+    setHasMore(
+      response.pagination.currentPage < response.pagination.totalPages
+    );
+  } catch (error) {
+    console.error('Error loading hadiths:', error);
+  }
+};
+```
+</CodeGroup>
+
+---
+
+## Caching System
+
+The service implements a two-tier caching system for optimal performance:
+
+### Memory Cache
+Recently accessed collections are cached in memory:
+
+```javascript
+// Automatic - no configuration needed
+const collection = await loadCollectionData('bukhari', 'fr');
+// Second call uses memory cache
+const sameCollection = await loadCollectionData('bukhari', 'fr');
+```
+
+### AsyncStorage Cache
+Collections are persisted to device storage:
+
+```javascript
+// Cache key format: @hadith_cdn_{fileName}-{language}
+// Example: @hadith_cdn_bukhari-fr
+```
+
+**Cache Hierarchy:**
+1. Check memory cache (instant)
+2. Check AsyncStorage (fast)
+3. Fetch from CDN (slower, but cached afterward)
+
+<Note>
+The caching system significantly reduces data usage and improves app performance, especially for offline usage.
+</Note>
+
+---
+
+## Collection Key Mapping
+
+The service handles multiple naming conventions:
+
+```javascript
+const COLLECTION_FILE_MAP = {
+  'sahih-al-bukhari': 'bukhari',
+  'sahih-bukhari': 'bukhari',
+  'bukhari': 'bukhari',
+  'albukhari': 'bukhari',
+  // ... more mappings
+};
+
+// All of these work:
+await HadithService.getCollection('sahih-al-bukhari');
+await HadithService.getCollection('bukhari');
+await HadithService.getCollection('albukhari');
+```
+
+---
+
+## Error Handling
+
+All functions handle errors gracefully with console logging:
+
+```javascript
+try {
+  const hadith = await HadithService.getHadithByNumber('bukhari', 1);
+} catch (error) {
+  // Error already logged to console
+  console.error('Failed to load hadith:', error.message);
+}
+```
+
+**Common Error Cases:**
+- Collection not found
+- Hadith number doesn't exist
+- Network error fetching from CDN
+- Invalid chapter ID
+
+---
+
+## Language Support
+
+Currently supported languages:
+
+<CardGroup cols={3}>
+  <Card title="French" icon="fr">
+    Primary language
+    Code: `fr`
+  </Card>
+  
+  <Card title="Arabic" icon="arabic">
+    Original text
+    Code: `ar`
+  </Card>
+  
+  <Card title="English" icon="en">
+    Fallback to French
+    Code: `en`
+  </Card>
+</CardGroup>
+
+```javascript
+const hadith = await HadithService.getHadithByNumber(
+  'bukhari',
+  1,
+  { language: 'ar' } // Get Arabic text
+);
+```

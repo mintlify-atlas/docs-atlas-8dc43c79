@@ -1,0 +1,287 @@
+---
+title: 'Quran Reading'
+description: 'Complete Quran reading experience with translations in French, Arabic, and Wolof'
+---
+
+## Overview
+
+AlXuraan provides a comprehensive Quran reading experience with support for multiple languages and translations. The app includes all 114 surahs with verse-by-verse translations, audio support, and special Wolof language support for West African users.
+
+## Key Features
+
+### Multi-Language Support
+
+<CardGroup cols={3}>
+  <Card title="Arabic" icon="book-quran">
+    Original Arabic text from Al-Quran Cloud API
+  </Card>
+  <Card title="French" icon="language">
+    French translation by Hameedullah
+  </Card>
+  <Card title="Wolof" icon="globe">
+    Special Wolof translations for Senegal and West Africa
+  </Card>
+</CardGroup>
+
+### Surah Navigation
+
+The Quran screen displays all 114 surahs with:
+- Surah number and Arabic name
+- French and Wolof translations
+- Verse count and revelation type (Meccan/Medinan)
+- Search functionality across all fields
+- Wolof availability badge
+
+<Note>
+  Wolof translations are available for select surahs, indicated by the "WL" badge.
+</Note>
+
+## API Integration
+
+AlXuraan uses multiple APIs to provide Quran content:
+
+<CodeGroup>
+
+```javascript Fetch Surah Names
+// Source: services/quranService.jsx:51-80
+const SURA_NAMES_URL = 'https://api.alquran.cloud/v1/surah';
+
+export const getSuraNames = async () => {
+  try {
+    const response = await fetch(SURA_NAMES_URL);
+    const data = await response.json();
+
+    // Format and enrich with Wolof data
+    const formattedSuras = data.data.map(sura => {
+      const wolofSura = wolofData.find(ws => ws.id === sura.number);
+      return {
+        id: sura.number,
+        name_ar: sura.name,
+        name_fr: sura.englishName,
+        name_wo: wolofSura?.name || `Sourate ${sura.number}`,
+        verses: VERSE_COUNTS[sura.number] || 0,
+        type: sura.revelationType === 'Meccan' ? 'Mecquoise' : 'Médinoise',
+        description: sura.englishNameTranslation,
+        hasWolofTranslation: !!wolofSura
+      };
+    });
+
+    return formattedSuras;
+  } catch (error) {
+    console.error('Error fetching sura names:', error);
+    return [];
+  }
+};
+```
+
+```javascript Get Surah Translation
+// Source: services/quranService.jsx:87-114
+const API_BASE_URL = 'https://quranenc.com/api/v1/translation';
+
+export const getSuraTranslation = async (suraNumber) => {
+  try {
+    if (!suraNumber || suraNumber < 1 || suraNumber > 114) {
+      throw new Error('Invalid surah number');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/sura/french_hameedullah/${suraNumber}`
+    );
+    const data = await response.json();
+
+    // Get Wolof translations
+    const wolofSura = wolofData.find(sura => sura.id === suraNumber);
+    const wolofVerses = wolofSura?.verses || [];
+
+    return data.result.map((verse, index) => ({
+      ...verse,
+      audio_url: `${AUDIO_BASE_URL}/${suraNumber}:${verse.id}/audio`,
+      wolof: wolofVerses[index]?.text || '',
+      has_wolof: !!wolofVerses[index]?.text
+    }));
+  } catch (error) {
+    console.error('Error fetching surah translation:', error);
+    return [];
+  }
+};
+```
+
+```javascript Get Single Verse
+// Source: services/quranService.jsx:122-143
+export const getAyaTranslation = async (suraNumber, ayaNumber) => {
+  try {
+    if (!suraNumber || !ayaNumber || suraNumber < 1 || suraNumber > 114) {
+      throw new Error('Invalid parameters');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/aya/french_hameedullah/${suraNumber}/${ayaNumber}`
+    );
+    const data = await response.json();
+
+    return {
+      ...data.result,
+      audio_url: `${AUDIO_BASE_URL}/${suraNumber}:${ayaNumber}/audio`
+    };
+  } catch (error) {
+    console.error('Error fetching verse translation:', error);
+    return null;
+  }
+};
+```
+
+</CodeGroup>
+
+## UI Implementation
+
+### Surah List Screen
+
+The main Quran screen (`screens/QuranScreen.jsx`) implements:
+
+<Steps>
+  <Step title="Load Surah Data">
+    Fetches all 114 surahs with their metadata on component mount
+  </Step>
+  <Step title="Search Functionality">
+    Real-time search across Arabic, French, Wolof names, and descriptions
+  </Step>
+  <Step title="Display Cards">
+    Beautiful gradient cards showing surah information with Wolof badges
+  </Step>
+  <Step title="Navigate to Detail">
+    Tapping a surah opens the detailed verse view
+  </Step>
+</Steps>
+
+### Search Implementation
+
+```javascript Surah Search
+// Source: screens/QuranScreen.jsx:32-47
+useEffect(() => {
+  if (searchQuery.trim() === '') {
+    setFilteredSourates(sourates);
+    return;
+  }
+
+  const searchLower = searchQuery.toLowerCase();
+  const filtered = sourates.filter(sura =>
+    sura.name_fr.toLowerCase().includes(searchLower) ||
+    sura.name_ar.includes(searchQuery) ||
+    sura.name_wo?.toLowerCase().includes(searchLower) ||
+    sura.description?.toLowerCase().includes(searchLower) ||
+    sura.id.toString() === searchQuery
+  );
+  setFilteredSourates(filtered);
+}, [searchQuery, sourates]);
+```
+
+## Audio Support
+
+Each verse includes an audio URL for recitation:
+
+```javascript Audio URL Structure
+const AUDIO_BASE_URL = 'https://api.alquran.cloud/v1/ayah';
+const audioUrl = `${AUDIO_BASE_URL}/${suraNumber}:${verseNumber}/audio`;
+```
+
+<Warning>
+  Audio playback requires an active internet connection to stream from the Al-Quran Cloud API.
+</Warning>
+
+## Data Structure
+
+### Verse Counts
+
+The app includes a comprehensive verse count mapping for all 114 surahs:
+
+```javascript Verse Counts
+// Source: services/quranService.jsx:24-42
+export const VERSE_COUNTS = {
+  1: 7,      // Al-Fatiha
+  2: 286,    // Al-Baqarah
+  3: 200,    // Ali 'Imran
+  // ... all 114 surahs
+  114: 6     // An-Nas
+};
+```
+
+### Surah Object
+
+```typescript TypeScript Interface
+interface Surah {
+  id: number;
+  name_ar: string;           // Arabic name
+  name_fr: string;           // French name
+  name_wo: string;           // Wolof name
+  verses: number;            // Number of verses
+  type: string;              // 'Mecquoise' or 'Médinoise'
+  description: string;       // English meaning
+  hasWolofTranslation: boolean;
+}
+```
+
+### Verse Object
+
+```typescript TypeScript Interface
+interface Verse {
+  id: number;
+  arabic: string;            // Arabic text
+  translation: string;       // French translation
+  audio_url: string;         // Audio recitation URL
+  wolof?: string;           // Wolof translation (if available)
+  has_wolof: boolean;       // Wolof availability flag
+}
+```
+
+## Utility Functions
+
+<Accordion title="Validation">
+  ```javascript
+  // Source: services/quranService.jsx:150-152
+  export const isValidSuraNumber = (suraNumber) => {
+    return Number.isInteger(suraNumber) && suraNumber >= 1 && suraNumber <= 114;
+  };
+  ```
+</Accordion>
+
+<Accordion title="Get Verse Count">
+  ```javascript
+  // Source: services/quranService.jsx:159-161
+  export const getVerseCount = (suraNumber) => {
+    return VERSE_COUNTS[suraNumber] || 0;
+  };
+  ```
+</Accordion>
+
+<Accordion title="Check Wolof Availability">
+  ```javascript
+  // Source: services/quranService.jsx:168-171
+  export const hasWolofTranslation = (suraNumber) => {
+    initWolofCache();
+    return !!wolofTranslationsCache[suraNumber]?.verses?.length;
+  };
+  ```
+</Accordion>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Caching" icon="database">
+    Implement local caching to reduce API calls and improve performance
+  </Card>
+  <Card title="Offline Support" icon="wifi-slash">
+    Consider downloading surahs for offline reading
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Always handle API failures gracefully with fallback data
+  </Card>
+  <Card title="Loading States" icon="spinner">
+    Show loading indicators during API requests
+  </Card>
+</CardGroup>
+
+## Related Services
+
+- [Prayer Times](/features/prayer-times) - Calculate prayer times based on location
+- [Hadith Collections](/features/hadith) - Browse authentic hadith collections
+- [Qibla Finder](/features/qibla) - Find the direction to Mecca

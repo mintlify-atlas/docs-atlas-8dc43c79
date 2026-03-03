@@ -1,0 +1,407 @@
+---
+title: Theming & Styling
+description: Learn about AlXuraan's comprehensive theming system including colors, typography, spacing, and styling utilities
+---
+
+## Overview
+
+AlXuraan uses a centralized theming system built with React Native and NativeWind (Tailwind CSS for React Native). The theme is defined in `components/ui/Theme.jsx` and provides a consistent design language across the entire application.
+
+## Theme Context
+
+AlXuraan uses React Context to manage theme state across the application.
+
+### ThemeProvider
+
+The theme provider is located at `context/ThemeContext.jsx`:
+
+```jsx context/ThemeContext.jsx
+import React, { createContext, useContext, useState } from 'react';
+
+export const ThemeContext = createContext();
+
+export const ThemeProvider = ({ children }) => {
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+```
+
+### Usage
+
+Wrap your app with the `ThemeProvider`:
+
+```jsx App.jsx
+import { ThemeProvider } from './context/ThemeContext';
+import AppNavigator from './navigation/AppNavigator';
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppNavigator />
+    </ThemeProvider>
+  );
+}
+```
+
+Access theme in components:
+
+```jsx
+import { useTheme } from '../context/ThemeContext';
+
+function MyComponent() {
+  const { theme, toggleTheme } = useTheme();
+  
+  return (
+    <TouchableOpacity onPress={toggleTheme}>
+      <Text>Current theme: {theme}</Text>
+    </TouchableOpacity>
+  );
+}
+```
+
+## Color Palette
+
+The color system is defined in the `COLORS` object:
+
+<CodeGroup>
+```jsx Primary Colors
+export const COLORS = {
+  primary: '#1F1A2C',      // Dark forest green
+  secondary: '#928DAB',    // Light turquoise
+  accent: '#98FB98',       // Pale green
+};
+```
+
+```jsx Backgrounds
+export const COLORS = {
+  background: '#1A1A1A',
+  searchBg: 'rgba(255, 255, 255, 0.15)',
+  buttonBg: 'rgba(152, 251, 152, 0.3)',
+};
+```
+
+```jsx Text Colors
+export const COLORS = {
+  textPrimary: '#FFFFFF',
+  textSecondary: 'rgba(255, 255, 255, 0.7)',
+  textMuted: 'rgba(255, 255, 255, 0.5)',
+};
+```
+
+```jsx Borders & Dividers
+export const COLORS = {
+  divider: 'rgba(152, 251, 152, 0.2)',
+  border: 'rgba(255, 255, 255, 0.1)',
+};
+```
+
+```jsx State Colors
+export const COLORS = {
+  success: '#4CAF50',
+  error: '#F44336',
+  warning: '#FFC107',
+  info: '#2196F3',
+};
+```
+
+```jsx Special Colors
+export const COLORS = {
+  wolofBadge: '#FFD700',    // Gold badge for Wolof translations
+  gradientStart: '#1F1A2C',
+  gradientEnd: '#928DAB',
+};
+```
+</CodeGroup>
+
+### Using Colors
+
+```jsx
+import { COLORS } from '../components/ui/Theme';
+
+<View style={{ backgroundColor: COLORS.background }}>
+  <Text style={{ color: COLORS.textPrimary }}>Hello</Text>
+</View>
+```
+
+## Typography
+
+AlXuraan provides a comprehensive typography system with predefined sizes and weights.
+
+<ParamField path="TYPOGRAPHY.sizes" type="object">
+  Font size scale in pixels
+  
+  ```jsx
+  {
+    xs: 12,
+    sm: 14,
+    base: 16,
+    lg: 18,
+    xl: 20,
+    '2xl': 24,
+    '3xl': 30,
+  }
+  ```
+</ParamField>
+
+<ParamField path="TYPOGRAPHY.weights" type="object">
+  Font weight scale
+  
+  ```jsx
+  {
+    regular: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  }
+  ```
+</ParamField>
+
+### CustomText Component
+
+Use the `CustomText` component from `components/ui/Typography.jsx` to apply typography:
+
+```jsx
+import { CustomText } from '../components/ui/Typography';
+
+<CustomText size="xl" weight="bold" color={COLORS.textPrimary}>
+  AlXuraan
+</CustomText>
+```
+
+## Spacing System
+
+Consistent spacing scale for margins, paddings, and gaps:
+
+```jsx
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  base: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  '2xl': 32,
+};
+```
+
+### Usage Example
+
+```jsx
+import { SPACING } from '../components/ui/Theme';
+
+<View style={{ 
+  padding: SPACING.md,
+  marginBottom: SPACING.xl 
+}}>
+  <Text>Content</Text>
+</View>
+```
+
+## Border Radius
+
+Standardized border radius values:
+
+```jsx
+export const BORDER_RADIUS = {
+  sm: 4,
+  base: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,  // For circular shapes
+};
+```
+
+## Shadows
+
+Predefined shadow styles for Android and iOS:
+
+<Tabs>
+  <Tab title="Small Shadow">
+    ```jsx
+    export const SHADOWS = {
+      sm: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.18,
+        shadowRadius: 1.0,
+        elevation: 1,
+      },
+    };
+    ```
+  </Tab>
+  <Tab title="Base Shadow">
+    ```jsx
+    export const SHADOWS = {
+      base: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 3,
+      },
+    };
+    ```
+  </Tab>
+  <Tab title="Large Shadow">
+    ```jsx
+    export const SHADOWS = {
+      lg: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.30,
+        shadowRadius: 4.65,
+        elevation: 5,
+      },
+    };
+    ```
+  </Tab>
+</Tabs>
+
+### Applying Shadows
+
+```jsx
+import { SHADOWS } from '../components/ui/Theme';
+
+<View style={{
+  backgroundColor: COLORS.background,
+  ...SHADOWS.base,
+}}>
+  <Text>Card with shadow</Text>
+</View>
+```
+
+## Gradients
+
+LinearGradient configurations:
+
+```jsx
+export const GRADIENTS = {
+  primary: [COLORS.gradientStart, COLORS.gradientEnd],
+  card: ['#928DAB', '#928DAB'],
+};
+```
+
+### Using Gradients
+
+```jsx
+import { LinearGradient } from 'expo-linear-gradient';
+import { GRADIENTS } from '../components/ui/Theme';
+
+<LinearGradient 
+  colors={GRADIENTS.primary}
+  style={{ flex: 1 }}
+>
+  <Text>Gradient Background</Text>
+</LinearGradient>
+```
+
+## Layout Constants
+
+Standardized layout values:
+
+```jsx
+export const LAYOUT = {
+  screenPadding: SPACING.md,     // 16
+  cardPadding: SPACING.base,     // 12
+  headerHeight: 56,
+  bottomTabHeight: 60,
+};
+```
+
+## Complete Example
+
+Here's a complete example using the theming system:
+
+```jsx SettingsScreen.jsx
+import React from 'react';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Settings } from 'lucide-react-native';
+import { CustomText } from '../components/ui/Typography';
+import { 
+  COLORS, 
+  SPACING, 
+  BORDER_RADIUS, 
+  GRADIENTS, 
+  SHADOWS 
+} from '../components/ui/Theme';
+
+export default function SettingsScreen() {
+  return (
+    <LinearGradient colors={GRADIENTS.primary} style={{ flex: 1 }}>
+      <View style={{ padding: SPACING.md }}>
+        <View style={{
+          backgroundColor: COLORS.cardBackground,
+          borderRadius: BORDER_RADIUS.lg,
+          padding: SPACING.lg,
+          marginBottom: SPACING.md,
+          ...SHADOWS.base,
+        }}>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: SPACING.sm,
+          }}>
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: BORDER_RADIUS.full,
+              backgroundColor: COLORS.buttonBg,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: SPACING.sm,
+            }}>
+              <Settings size={20} color={COLORS.textPrimary} />
+            </View>
+            <CustomText weight="bold" color={COLORS.textPrimary}>
+              Settings
+            </CustomText>
+          </View>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+}
+```
+
+<Note>
+  All theme values are exported from `components/ui/Theme.jsx` for easy import and consistent usage across the application.
+</Note>
+
+## Best Practices
+
+1. **Always use theme constants** - Never hardcode colors, spacing, or other design values
+2. **Use CustomText component** - For consistent typography across the app
+3. **Apply shadows via spread operator** - Use `...SHADOWS.base` to apply shadow styles
+4. **Leverage LinearGradient** - Use predefined gradient arrays for consistent backgrounds
+5. **Keep accessibility in mind** - Ensure sufficient color contrast for text readability
+
+## NativeWind Integration
+
+AlXuraan also uses NativeWind for Tailwind-style utility classes:
+
+```jsx
+import { View, Text } from 'react-native';
+
+<View className="flex-1 bg-gray-900 p-4">
+  <Text className="text-white text-xl font-bold">
+    Styled with NativeWind
+  </Text>
+</View>
+```
+
+<Note>
+  NativeWind requires the `global.css` file imported in `App.jsx` and proper configuration in `tailwind.config.js`.
+</Note>

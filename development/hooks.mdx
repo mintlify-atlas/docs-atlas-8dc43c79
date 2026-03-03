@@ -1,0 +1,644 @@
+---
+title: Custom React Hooks
+description: Comprehensive guide to AlXuraan's custom React hooks for Islamic content, prayer times, and location services
+---
+
+## Overview
+
+AlXuraan provides a collection of custom React hooks located in `hooks/` that encapsulate complex logic for:
+
+- Prayer time calculations
+- Quran surah fetching
+- Hadith retrieval
+- Hijri date conversion
+- Adhan audio playback
+- Nearby mosque discovery
+
+All hooks follow React best practices with proper state management, error handling, and cleanup.
+
+## useAdhan
+
+Manages Adhan (call to prayer) audio playback.
+
+### Location
+
+`hooks/useAdhan.jsx`
+
+### Signature
+
+```typescript
+useAdhan(): {
+  isPlaying: boolean;
+  adhanType: string;
+  error: string | null;
+  playAdhan: (type?: string) => Promise<void>;
+  stopAdhan: () => Promise<void>;
+}
+```
+
+### Parameters
+
+None - the hook manages internal state.
+
+### Return Values
+
+<ParamField path="isPlaying" type="boolean">
+  Whether Adhan audio is currently playing
+</ParamField>
+
+<ParamField path="adhanType" type="string">
+  Type of Adhan being played (e.g., 'normal')
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if playback fails
+</ParamField>
+
+<ParamField path="playAdhan" type="(type?: string) => Promise<void>">
+  Function to start Adhan playback. Accepts optional type parameter (default: 'normal')
+</ParamField>
+
+<ParamField path="stopAdhan" type="() => Promise<void>">
+  Function to stop Adhan playback
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { useAdhan } from '../hooks/useAdhan';
+
+export default function PrayerNotification() {
+  const { isPlaying, adhanType, error, playAdhan, stopAdhan } = useAdhan();
+
+  return (
+    <View>
+      {error && <Text style={{ color: 'red' }}>{error}</Text>}
+      
+      <TouchableOpacity 
+        onPress={() => playAdhan('normal')}
+        disabled={isPlaying}
+      >
+        <Text>Play Adhan</Text>
+      </TouchableOpacity>
+
+      {isPlaying && (
+        <TouchableOpacity onPress={stopAdhan}>
+          <Text>Stop Adhan ({adhanType})</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+```
+
+<Note>
+  The Adhan service must be properly configured in `services/adhanService.js` with audio files.
+</Note>
+
+## useHadith
+
+Fetches a specific Hadith from a collection with multi-language support.
+
+### Location
+
+`hooks/useHadith.jsx`
+
+### Signature
+
+```typescript
+useHadith(
+  collectionKey: string,
+  hadithNumber: number
+): {
+  hadith: object | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => void;
+  language: string;
+}
+```
+
+### Parameters
+
+<ParamField path="collectionKey" type="string" required>
+  Hadith collection identifier (e.g., 'bukhari', 'muslim', 'abudawud')
+</ParamField>
+
+<ParamField path="hadithNumber" type="number" required>
+  Specific Hadith number within the collection
+</ParamField>
+
+### Return Values
+
+<ParamField path="hadith" type="object | null">
+  Hadith data object containing Arabic text and translations
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  Loading state during fetch operation
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if fetch fails
+</ParamField>
+
+<ParamField path="refresh" type="() => void">
+  Function to manually refresh/refetch the Hadith
+</ParamField>
+
+<ParamField path="language" type="string">
+  Current language setting (loaded from AsyncStorage)
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useHadith } from '../hooks/useHadith';
+import { COLORS } from '../components/ui/Theme';
+
+export default function HadithViewer({ collectionKey, hadithNumber }) {
+  const { hadith, loading, error, refresh, language } = useHadith(
+    collectionKey,
+    hadithNumber
+  );
+
+  if (loading) {
+    return <ActivityIndicator size="large" color={COLORS.primary} />;
+  }
+
+  if (error) {
+    return (
+      <View>
+        <Text style={{ color: COLORS.error }}>{error}</Text>
+        <TouchableOpacity onPress={refresh}>
+          <Text>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      {/* Arabic Text */}
+      <Text style={{ 
+        textAlign: 'right', 
+        fontSize: 20,
+        color: COLORS.textPrimary 
+      }}>
+        {hadith.hadithArabic}
+      </Text>
+
+      {/* Translation */}
+      <Text style={{ color: COLORS.textSecondary }}>
+        {hadith.translations[language]}
+      </Text>
+
+      <TouchableOpacity onPress={refresh}>
+        <Text>Refresh</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+```
+
+## useHijriDate
+
+Converts Gregorian dates to Islamic Hijri calendar dates.
+
+### Location
+
+`hooks/useHijriDate.jsx`
+
+### Signature
+
+```typescript
+useHijriDate(): {
+  hijriDate: object | null;
+  loading: boolean;
+  error: string | null;
+  refreshHijriDate: () => void;
+}
+```
+
+### Parameters
+
+None - automatically uses current date.
+
+### Return Values
+
+<ParamField path="hijriDate" type="object | null">
+  Hijri date object containing day, month, year, and formatted string
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  Loading state during API call
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if conversion fails
+</ParamField>
+
+<ParamField path="refreshHijriDate" type="() => void">
+  Function to manually refresh the Hijri date
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { View, Text } from 'react-native';
+import { useHijriDate } from '../hooks/useHijriDate';
+import { COLORS } from '../components/ui/Theme';
+
+export default function IslamicCalendar() {
+  const { hijriDate, loading, error } = useHijriDate();
+
+  if (loading) return <Text>Loading date...</Text>;
+  if (error) return <Text style={{ color: COLORS.error }}>{error}</Text>;
+
+  return (
+    <View>
+      <Text style={{ color: COLORS.textPrimary }}>
+        Today's Hijri Date:
+      </Text>
+      <Text style={{ fontSize: 20, color: COLORS.accent }}>
+        {hijriDate.hijri.day} {hijriDate.hijri.month.en} {hijriDate.hijri.year}
+      </Text>
+    </View>
+  );
+}
+```
+
+## useNearbyMosques
+
+Finds mosques near the user's current location using Google Places API.
+
+### Location
+
+`hooks/useNearbyMosques.jsx`
+
+### Signature
+
+```typescript
+useNearbyMosques(
+  apiKey: string,
+  radius?: number
+): {
+  mosques: array;
+  loading: boolean;
+  error: string | null;
+  refreshMosques: () => void;
+}
+```
+
+### Parameters
+
+<ParamField path="apiKey" type="string" required>
+  Google Places API key for location services
+</ParamField>
+
+<ParamField path="radius" type="number" default={5000}>
+  Search radius in meters (default: 5000m = 5km)
+</ParamField>
+
+### Return Values
+
+<ParamField path="mosques" type="array">
+  Array of nearby mosque objects with name, location, and details
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  Loading state during location fetch and API call
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if location permission denied or API fails
+</ParamField>
+
+<ParamField path="refreshMosques" type="() => void">
+  Function to manually refresh mosque list
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { FlatList, View, Text } from 'react-native';
+import { useNearbyMosques } from '../hooks/useNearbyMosques';
+import { COLORS } from '../components/ui/Theme';
+
+const GOOGLE_API_KEY = 'your-api-key-here';
+
+export default function MosqueFinder() {
+  const { mosques, loading, error, refreshMosques } = useNearbyMosques(
+    GOOGLE_API_KEY,
+    3000 // 3km radius
+  );
+
+  if (loading) return <Text>Finding nearby mosques...</Text>;
+  if (error) return <Text style={{ color: COLORS.error }}>{error}</Text>;
+
+  return (
+    <FlatList
+      data={mosques}
+      keyExtractor={(item) => item.place_id}
+      renderItem={({ item }) => (
+        <View style={{ padding: 16 }}>
+          <Text style={{ fontSize: 18, color: COLORS.textPrimary }}>
+            {item.name}
+          </Text>
+          <Text style={{ color: COLORS.textSecondary }}>
+            {item.vicinity}
+          </Text>
+          <Text style={{ color: COLORS.accent }}>
+            {item.distance}m away
+          </Text>
+        </View>
+      )}
+      onRefresh={refreshMosques}
+      refreshing={loading}
+    />
+  );
+}
+```
+
+<Note>
+  This hook requires location permissions. Ensure you've requested `expo-location` permissions before using.
+</Note>
+
+## usePrayerTimes
+
+Calculates Islamic prayer times based on user's current location.
+
+### Location
+
+`hooks/useprayerTimes.jsx`
+
+### Signature
+
+```typescript
+usePrayerTimes(
+  method?: number
+): {
+  prayerTimes: object | null;
+  loading: boolean;
+  error: string | null;
+  refreshPrayerTimes: () => void;
+}
+```
+
+### Parameters
+
+<ParamField path="method" type="number" default={2}>
+  Calculation method for prayer times:
+  - 1: University of Islamic Sciences, Karachi
+  - 2: Islamic Society of North America (ISNA) - Default
+  - 3: Muslim World League
+  - 4: Umm Al-Qura University, Makkah
+  - 5: Egyptian General Authority of Survey
+</ParamField>
+
+### Return Values
+
+<ParamField path="prayerTimes" type="object | null">
+  Object containing timings for Fajr, Dhuhr, Asr, Maghrib, Isha
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  Loading state during location and time calculation
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if location denied or calculation fails
+</ParamField>
+
+<ParamField path="refreshPrayerTimes" type="() => void">
+  Function to manually refresh prayer times
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import { usePrayerTimes } from '../hooks/useprayerTimes';
+import { COLORS, SPACING } from '../components/ui/Theme';
+
+export default function PrayerTimesScreen() {
+  // Using ISNA calculation method (default)
+  const { prayerTimes, loading, error, refreshPrayerTimes } = usePrayerTimes(2);
+
+  if (loading) return <Text>Loading prayer times...</Text>;
+  if (error) return <Text style={{ color: COLORS.error }}>{error}</Text>;
+
+  const prayers = [
+    { name: 'Fajr', time: prayerTimes.timings.Fajr },
+    { name: 'Dhuhr', time: prayerTimes.timings.Dhuhr },
+    { name: 'Asr', time: prayerTimes.timings.Asr },
+    { name: 'Maghrib', time: prayerTimes.timings.Maghrib },
+    { name: 'Isha', time: prayerTimes.timings.Isha },
+  ];
+
+  return (
+    <ScrollView>
+      {prayers.map((prayer) => (
+        <View key={prayer.name} style={{ 
+          padding: SPACING.md,
+          borderBottomWidth: 1,
+          borderColor: COLORS.divider 
+        }}>
+          <Text style={{ fontSize: 18, color: COLORS.textPrimary }}>
+            {prayer.name}
+          </Text>
+          <Text style={{ fontSize: 24, color: COLORS.accent }}>
+            {prayer.time}
+          </Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+```
+
+## useQuranSurah
+
+Fetches a specific Surah (chapter) from the Quran with Arabic text.
+
+### Location
+
+`hooks/useQuranSurah.jsx`
+
+### Signature
+
+```typescript
+useQuranSurah(
+  surahNumber: number,
+  edition?: string
+): {
+  surah: object | null;
+  loading: boolean;
+  error: string | null;
+}
+```
+
+### Parameters
+
+<ParamField path="surahNumber" type="number" required>
+  Surah number from 1 to 114
+</ParamField>
+
+<ParamField path="edition" type="string" default="quran-uthmani">
+  Quran edition/script type:
+  - 'quran-uthmani': Uthmani script (default)
+  - 'quran-simple': Simplified Arabic
+  - Other editions from alquran.cloud API
+</ParamField>
+
+### Return Values
+
+<ParamField path="surah" type="object | null">
+  Surah object containing ayahs, name, revelation type, etc.
+</ParamField>
+
+<ParamField path="loading" type="boolean">
+  Loading state during API fetch
+</ParamField>
+
+<ParamField path="error" type="string | null">
+  Error message if fetch fails
+</ParamField>
+
+### Usage Example
+
+```jsx
+import React from 'react';
+import { View, Text, FlatList } from 'react-native';
+import { useQuranSurah } from '../hooks/useQuranSurah';
+import { COLORS } from '../components/ui/Theme';
+
+export default function SurahViewer({ surahNumber }) {
+  const { surah, loading, error } = useQuranSurah(surahNumber, 'quran-uthmani');
+
+  if (loading) return <Text>Loading Surah...</Text>;
+  if (error) return <Text style={{ color: COLORS.error }}>{error}</Text>;
+
+  return (
+    <View>
+      <Text style={{ fontSize: 24, color: COLORS.textPrimary }}>
+        {surah.englishName} ({surah.name})
+      </Text>
+      <Text style={{ color: COLORS.textSecondary }}>
+        {surah.revelationType} • {surah.numberOfAyahs} verses
+      </Text>
+
+      <FlatList
+        data={surah.ayahs}
+        keyExtractor={(ayah) => ayah.number.toString()}
+        renderItem={({ item }) => (
+          <View style={{ padding: 16 }}>
+            <Text style={{ 
+              textAlign: 'right',
+              fontSize: 20,
+              color: COLORS.textPrimary,
+              fontFamily: 'Amiri'
+            }}>
+              {item.text} {`﴿${item.numberInSurah}﴾`}
+            </Text>
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+```
+
+## Hook Best Practices
+
+### Error Handling
+
+Always handle error states gracefully:
+
+```jsx
+if (error) {
+  return (
+    <View>
+      <Text>{error}</Text>
+      <Button onPress={refresh} title="Retry" />
+    </View>
+  );
+}
+```
+
+### Loading States
+
+Show loading indicators for better UX:
+
+```jsx
+if (loading) {
+  return <ActivityIndicator size="large" color={COLORS.primary} />;
+}
+```
+
+### Cleanup
+
+Hooks handle their own cleanup automatically, but ensure you don't update state on unmounted components:
+
+```jsx
+useEffect(() => {
+  let isMounted = true;
+  
+  fetchData().then(data => {
+    if (isMounted) {
+      setData(data);
+    }
+  });
+  
+  return () => {
+    isMounted = false;
+  };
+}, []);
+```
+
+### Combining Hooks
+
+You can use multiple hooks together:
+
+```jsx
+export default function IslamicDashboard() {
+  const { prayerTimes, loading: prayerLoading } = usePrayerTimes();
+  const { hijriDate, loading: dateLoading } = useHijriDate();
+  const { isPlaying, playAdhan } = useAdhan();
+
+  const loading = prayerLoading || dateLoading;
+
+  return (
+    <View>
+      {!loading && (
+        <>
+          <PrayerTimesDisplay times={prayerTimes} />
+          <HijriDateDisplay date={hijriDate} />
+          <Button onPress={() => playAdhan()} title="Play Adhan" />
+        </>
+      )}
+    </View>
+  );
+}
+```
+
+<Note>
+  All hooks that require location access will trigger permission requests automatically through `expo-location`.
+</Note>
+
+## Dependencies
+
+These hooks depend on:
+
+- `@react-native-async-storage/async-storage` - Data persistence
+- `expo-location` - Geolocation services
+- AlXuraan services (`aladhanService`, `alxuraanService`, `HadithService`, etc.)
+
+Ensure all dependencies are properly installed and configured.

@@ -1,0 +1,158 @@
+---
+title: Introduction to AlXuraan
+description: A comprehensive Islamic companion app featuring Quran with Wolof translation, prayer times, hadith collections, and more
+---
+
+# Welcome to AlXuraan
+
+AlXuraan is a modern Islamic companion mobile application built with React Native and Expo, designed to bring essential Islamic resources to your fingertips. Whether you're seeking to read the Quran with unique Wolof translations, track prayer times, or explore hadith collections, AlXuraan provides a seamless and beautiful experience.
+
+## What Makes AlXuraan Special?
+
+AlXuraan stands out with its unique features tailored for diverse Muslim communities:
+
+<CardGroup cols={2}>
+  <Card title="Wolof Translation" icon="language">
+    First-class support for Wolof translations of the Quran, making it accessible to Wolof-speaking communities worldwide
+  </Card>
+  
+  <Card title="Smart Prayer Times" icon="clock">
+    Location-based prayer times with automatic notifications and beautiful visual displays of Fajr, Dhuhr, Asr, Maghrib, and Isha
+  </Card>
+  
+  <Card title="Audio Recitations" icon="volume-2">
+    Listen to Quran recitations from multiple renowned Qaris with background audio support
+  </Card>
+  
+  <Card title="Hadith Collections" icon="book-open">
+    Browse and search through authentic hadith collections with French translations
+  </Card>
+  
+  <Card title="Qibla Finder" icon="compass">
+    Find the Qibla direction using device sensors and location services
+  </Card>
+  
+  <Card title="Live Streams" icon="video">
+    Direct links to Masjid Al-Nabawi and Masjid Al-Haram live broadcasts
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Quran Reader
+- **114 Surahs** with Arabic text and translations
+- **Wolof translations** from local JSON data (quran_wolof.json)
+- **French translations** from Hamidullah edition
+- **Audio playback** for each ayah with multiple reciters
+- **Favorites system** to bookmark verses
+- **Search functionality** across translations
+
+### Prayer Times
+- **Automatic location detection** using Expo Location
+- **Aladhan API integration** for accurate prayer times
+- **Customizable notifications** for each prayer
+- **Hijri calendar** display
+- **Background fetch** support for timely notifications
+
+### Hadith Library
+- Multiple hadith collections
+- French translations
+- Search across hadiths
+- Categorized by topics
+- Bookmark favorite hadiths
+
+### Audio Player
+- Background audio playback
+- Queue management
+- Playback controls (play, pause, seek)
+- Support for multiple reciters
+- Audio continues when app is backgrounded
+
+## Technology Stack
+
+AlXuraan is built with modern technologies:
+
+- **React Native 0.79.4** - Cross-platform mobile framework
+- **Expo SDK 53** - Development platform and tooling
+- **React Navigation 7** - Navigation solution
+- **NativeWind 4** - Tailwind CSS for React Native
+- **Zustand** - State management
+- **Expo Audio/AV** - Audio playback capabilities
+- **Axios** - HTTP client for API requests
+
+## Architecture
+
+The app follows a clean architecture with:
+
+```
+alxuraan/
+├── screens/          # Screen components (HomeScreen, QuranScreen, etc.)
+├── components/       # Reusable UI components
+├── services/         # API and business logic (quranService, prayerTimesService)
+├── navigation/       # Navigation configuration
+├── context/          # React Context providers (ThemeContext, PlayerContext)
+├── hooks/           # Custom React hooks
+├── data/            # Local JSON data (Wolof translations)
+└── utils/           # Utility functions
+```
+
+## API Integrations
+
+AlXuraan integrates with multiple Islamic APIs:
+
+- **AlQuran Cloud API** - Quran text and audio
+- **Quran.com API** - Recitations and reciters
+- **QuranEnc API** - French translations
+- **Aladhan API** - Prayer times and Hijri calendar
+
+## Get Started
+
+Ready to explore AlXuraan? Check out these guides:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get the app running locally in minutes
+  </Card>
+  
+  <Card title="Installation" icon="download" href="/installation">
+    Detailed setup instructions for development
+  </Card>
+  
+  <Card title="Quran Features" icon="book-open" href="/features/quran">
+    Learn about Quran reading with Wolof translation
+  </Card>
+  
+  <Card title="Services & APIs" icon="code" href="/services/quran-service">
+    Documentation for services and APIs
+  </Card>
+</CardGroup>
+
+## App Configuration
+
+The app is configured via `app.config.ts` with:
+
+```typescript
+{
+  name: 'alxuraan',
+  slug: 'alxuraan',
+  version: '1.0.0',
+  ios: {
+    bundleIdentifier: 'com.devdiop.alxuraan',
+    supportsTablet: true,
+    infoPlist: {
+      UIBackgroundModes: ['audio']
+    }
+  },
+  android: {
+    package: 'com.devdiop.alxuraan'
+  }
+}
+```
+
+## Community & Support
+
+AlXuraan is designed to serve the Muslim community with accessible, high-quality Islamic resources. We welcome contributions and feedback to make the app even better.
+
+<Note>
+  The app requires permissions for location (prayer times), notifications (prayer alerts), and device motion (Qibla finder) to function fully.
+</Note>

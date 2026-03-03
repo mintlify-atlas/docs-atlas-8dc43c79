@@ -1,80 +1,352 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get AlXuraan running on your local machine in under 5 minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+Get AlXuraan up and running on your development machine in just a few steps. This guide will have you viewing the app on your device or simulator quickly.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before you begin, ensure you have:
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- **Node.js 18+** installed on your machine
+- **npm** or **yarn** package manager
+- **Expo Go app** on your iOS/Android device (for quick testing)
+- **Xcode** (for iOS development on Mac)
+- **Android Studio** (for Android development)
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  For the fastest start, use the Expo Go app. For full features like background audio and notifications, you'll need a development build.
 </Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the AlXuraan source code to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd alxuraan
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    Or if you prefer yarn:
+    
+    ```bash
+    yarn install
+    ```
+    
+    This will install all dependencies including:
+    - React Native 0.79.4
+    - Expo SDK 53
+    - React Navigation 7
+    - Expo Audio, Notifications, Location
+    - NativeWind and Tailwind CSS
+  </Step>
+
+  <Step title="Start the Development Server">
+    Launch the Expo development server:
+    
+    ```bash
+    npm start
+    ```
+    
+    Or with the dev client:
+    
+    ```bash
+    npm run start
+    ```
+    
+    This runs: `expo start --dev-client`
+    
+    You'll see a QR code in your terminal and a web interface will open in your browser.
+  </Step>
+
+  <Step title="Run on Your Device">
+    Choose your platform:
+    
+    <Tabs>
+      <Tab title="iOS">
+        For iOS Simulator (requires Mac with Xcode):
+        
+        ```bash
+        npm run ios
+        ```
+        
+        This runs: `expo run:ios`
+      </Tab>
+      
+      <Tab title="Android">
+        For Android Emulator or connected device:
+        
+        ```bash
+        npm run android
+        ```
+        
+        This runs: `expo run:android`
+      </Tab>
+      
+      <Tab title="Expo Go">
+        1. Install Expo Go from App Store or Play Store
+        2. Scan the QR code from your terminal
+        3. The app will load on your device
+        
+        <Warning>
+          Some features like background audio won't work in Expo Go. Use a development build for full functionality.
+        </Warning>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Grant Permissions">
+    When the app launches, grant the following permissions:
+    
+    - **Location**: Required for prayer times based on your location
+    - **Notifications**: Required for prayer time alerts
+    - **Motion & Orientation**: Required for Qibla finder
+    
+    The app will request these on first launch via `App.jsx`:
+    
+    ```jsx
+    // Location permission
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    
+    // Notification permission  
+    const { status } = await Notifications.requestPermissionsAsync();
+    ```
+  </Step>
+</Steps>
+
+## Verify Installation
+
+Once the app loads, you should see:
+
+1. **Home Screen** with:
+   - Current time display
+   - Prayer times for your location
+   - Hijri date
+   - Next prayer countdown
+   - Live stream links to Masjid Al-Nabawi and Al-Haram
+
+2. **Bottom Navigation** with icons for:
+   - Home
+   - Compass (Qibla)
+   - Messages
+   - Profile
+
+3. **Feature Cards** for:
+   - Coran (Quran)
+   - Adhan
+   - Qibla
+   - Don (Donations)
+
+## Available Scripts
+
+From `package.json`, here are all available commands:
+
+<CodeGroup>
+```bash Development
+# Start development server with dev client
+npm start
+
+# Run on iOS simulator
+npm run ios
+
+# Run on Android emulator  
+npm run android
+
+# Run on web
+npm run web
+```
+
+```bash Building
+# Create development build
+npm run build:dev
+
+# Create preview build
+npm run build:preview
+
+# Create production build
+npm run build:prod
+
+# Generate native projects
+npm run prebuild
+```
+
+```bash Code Quality
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+```
+</CodeGroup>
+
+## Project Structure Overview
+
+Here's what you'll find in the codebase:
+
+```
+alxuraan/
+├── App.jsx                 # Main app component with providers
+├── app.config.ts          # Expo configuration
+├── package.json           # Dependencies and scripts
+│
+├── screens/               # Screen components
+│   ├── HomeScreen.jsx    # Main home with prayer times
+│   ├── QuranScreen.jsx   # Quran reading interface
+│   ├── SurahDetailScreen.jsx
+│   ├── PrayerTimesScreen.jsx
+│   ├── HadithCollection.jsx
+│   └── QarisScreen.jsx   # Audio reciters
+│
+├── components/           # Reusable components
+│   ├── PrayerTimes.jsx
+│   ├── LiveStreams.jsx
+│   ├── Features.jsx
+│   └── ui/              # UI components
+│
+├── services/            # Business logic & APIs
+│   ├── quranService.jsx      # Quran API integration
+│   ├── aladhanService.jsx    # Prayer times API
+│   ├── hadithService.jsx     # Hadith collections
+│   ├── prayerTimesService.js
+│   └── notificationService.jsx
+│
+├── navigation/          # Navigation setup
+│   ├── AppNavigator.jsx
+│   ├── QuranNavigator.jsx
+│   └── HadithNavigator.jsx
+│
+├── context/            # React Context
+│   ├── ThemeContext.jsx
+│   └── PlayerContext.jsx  # Audio player state
+│
+├── data/              # Local data
+│   └── quran_wolof.json  # Wolof translations
+│
+└── hooks/             # Custom React hooks
+```
+
+## Testing Key Features
+
+### Prayer Times
+
+The app fetches prayer times from the Aladhan API based on your location:
+
+```jsx
+// From HomeScreen.jsx
+const locationData = await aladhanService.getUserLocation();
+const times = await aladhanService.getPrayerTimes(
+  locationData.latitude,
+  locationData.longitude
+);
+```
+
+### Quran Reading
+
+Browse surahs and read with Wolof and French translations:
+
+```jsx
+// From quranService.jsx
+const surahs = await getSuraNames();
+const translation = await getSuraTranslation(suraNumber);
+
+// Each verse includes:
+// - Arabic text
+// - French translation (Hamidullah)
+// - Wolof translation (from local JSON)
+// - Audio URL
+```
+
+### Audio Player
+
+Play Quran recitations with background audio support:
+
+```jsx
+// Configured in app.config.ts
+ios: {
+  infoPlist: {
+    UIBackgroundModes: ['audio']
+  }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="App won't start or shows errors">
+    1. Clear node_modules and reinstall:
+    ```bash
+    rm -rf node_modules
+    npm install
+    ```
+    
+    2. Clear Expo cache:
+    ```bash
+    npx expo start -c
+    ```
+    
+    3. Check Node.js version (should be 18+):
+    ```bash
+    node --version
+    ```
+  </Accordion>
+
+  <Accordion title="Location permission denied">
+    The app needs location for prayer times. Grant permission in:
+    - iOS: Settings > AlXuraan > Location
+    - Android: Settings > Apps > AlXuraan > Permissions
+  </Accordion>
+
+  <Accordion title="Prayer times not loading">
+    1. Ensure location permission is granted
+    2. Check internet connection
+    3. Verify Aladhan API is accessible
+    4. Check console for error messages
+  </Accordion>
+
+  <Accordion title="Audio playback not working">
+    Audio features require a development build, not Expo Go:
+    ```bash
+    npm run build:dev
+    ```
+    Then install the generated build on your device.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that you have AlXuraan running:
+
+<CardGroup cols={2}>
+  <Card title="Full Installation" icon="download" href="/installation">
+    Set up development builds and configure your environment
+  </Card>
+  
+  <Card title="Features Guide" icon="book" href="/features/quran">
+    Explore all features and how to use them
+  </Card>
+  
+  <Card title="API Services" icon="plug" href="/services/quran-service">
+    Learn about the API integrations and services
+  </Card>
+  
+  <Card title="Components" icon="cube" href="/components/player">
+    Understand the component architecture
+  </Card>
+</CardGroup>
+
+<Tip>
+  Join the development by exploring the codebase and trying out different features. The app is designed to be modular and easy to extend!
+</Tip>

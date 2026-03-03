@@ -1,0 +1,338 @@
+---
+title: RecitationsList
+description: Scrollable list component for displaying Quranic recitations with embedded audio controls
+---
+
+## Overview
+
+The `RecitationsList` component renders a beautiful, interactive list of Quranic recitations (Surahs) with embedded audio players. Each item displays Surah information, verse count, duration, and inline playback controls. The component supports multiple API sources and handles empty states gracefully.
+
+## Features
+
+- Scrollable FlatList of recitations
+- Embedded `SimpleAudioControls` for each item
+- Visual highlighting for currently playing recitation
+- Empty state with helpful message
+- Header with total count
+- Support for multiple API sources (MP3Quran, QuranFoundation)
+- Dynamic audio URL generation
+- Arabic and English Surah names
+- Verse count and duration display
+- Tap to view full recitation details
+
+## Props
+
+<ParamField path="recitations" type="array" default="[]">
+  Array of recitation objects to display. Each object should contain:
+  
+  ```typescript
+  {
+    id: string | number,
+    surahNumber: number,
+    englishName: string,
+    arabicName: string,
+    versesCount: number,
+    duration?: string,     // e.g., "15:30"
+    audioUrl?: string,     // Direct URL (for MP3Quran)
+    name?: string          // Full name
+  }
+  ```
+  
+  Defaults to empty array to prevent errors.
+</ParamField>
+
+<ParamField path="reciter" type="object">
+  Reciter information object, used for MP3Quran API source.
+  
+  ```typescript
+  {
+    name: string,
+    moshaf: Array<{
+      server: string,      // Base URL for audio files
+      surah_list: string   // Comma-separated list of Surah numbers
+    }>
+  }
+  ```
+</ParamField>
+
+<ParamField path="apiSource" type="string">
+  The API source being used. Determines how audio URLs are generated.
+  
+  **Options:**
+  - `"mp3quran"` - Uses direct URLs from recitation objects
+  - `"quranfoundation"` - Generates URLs dynamically using Surah number
+  
+  **Default:** `"mp3quran"`
+</ParamField>
+
+<ParamField path="onRecitationPress" type="function">
+  Callback triggered when a recitation item is tapped.
+  
+  **Signature:** `(recitation: object) => void`
+  
+  Typically used for navigation to detail screen.
+</ParamField>
+
+<ParamField path="style" type="object">
+  Additional styles to apply to the FlatList container.
+</ParamField>
+
+## Usage Example
+
+### Basic Implementation
+
+```jsx
+import RecitationsList from '../components/RecitationsList';
+
+function ReciterScreen({ reciter }) {
+  const [recitations, setRecitations] = useState([]);
+
+  const handleRecitationPress = (recitation) => {
+    navigation.navigate('RecitationDetail', { recitation });
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <RecitationsList
+        recitations={recitations}
+        reciter={reciter}
+        apiSource="mp3quran"
+        onRecitationPress={handleRecitationPress}
+      />
+    </View>
+  );
+}
+```
+
+### Real Usage from ReciterRecitationsScreenSimple
+
+```jsx
+import RecitationsList from '../components/RecitationsList';
+import { quranService } from '../services/alxuraanService';
+
+export default function ReciterRecitationsScreenSimple({ navigation, route }) {
+  const { reciter, apiSource = 'mp3quran' } = route.params;
+  const [recitations, setRecitations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRecitations();
+  }, []);
+
+  const fetchRecitations = async () => {
+    try {
+      setLoading(true);
+      const surahsData = await quranService.getSurahs();
+
+      if (apiSource === 'quranfoundation') {
+        // Create recitations list from Surahs
+        const recitationsList = surahsData.map(surah => ({
+          id: surah.number,
+          name: `${surah.englishName} (${surah.name})`,
+          arabicName: surah.name,
+          englishName: surah.englishName,
+          surahNumber: surah.number,
+          versesCount: surah.numberOfAyahs,
+          audioUrl: null,
+          duration: null,
+          source: 'quranfoundation'
+        }));
+        setRecitations(recitationsList);
+      } else {
+        // Use MP3Quran moshaf data
+        const moshaf = reciter.moshaf[0];
+        const surahNumbers = moshaf.surah_list.split(',');
+        
+        const recitationsList = surahNumbers.map(num => {
+          const surah = surahsData.find(s => s.number === parseInt(num));
+          return {
+            id: surah.number,
+            surahNumber: surah.number,
+            englishName: surah.englishName,
+            arabicName: surah.name,
+            versesCount: surah.numberOfAyahs,
+            audioUrl: `${moshaf.server}${num.padStart(3, '0')}.mp3`
+          };
+        });
+        setRecitations(recitationsList);
+      }
+    } catch (error) {
+      console.error('Error fetching recitations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <LinearGradient colors={GRADIENTS.primary} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <RecitationsList
+          recitations={recitations}
+          reciter={reciter}
+          apiSource={apiSource}
+          onRecitationPress={(item) => {
+            navigation.navigate('RecitationDetail', { recitation: item });
+          }}
+          style={{ flex: 1 }}
+        />
+      </SafeAreaView>
+    </LinearGradient>
+  );
+}
+```
+
+## Audio URL Generation
+
+The component generates audio URLs based on the API source:
+
+<CodeGroup>
+```js QuranFoundation
+// For QuranFoundation API
+const audioUrl = `https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${recitation.surahNumber}.mp3`;
+```
+
+```js MP3Quran
+// For MP3Quran API
+const audioUrl = recitation.audioUrl; // Direct URL from data
+```
+</CodeGroup>
+
+## List Components
+
+### Header Component
+
+Displays helpful information and total count:
+
+```jsx
+┌────────────────────────────────────────────┐
+│ ▶ Cliquez sur les contrôles pour écouter  │
+│   • 114 sourates                            │
+└────────────────────────────────────────────┘
+```
+
+### Empty Component
+
+Shown when no recitations are available:
+
+```jsx
+┌────────────────────────────────────────────┐
+│            🎵                               │
+│                                             │
+│    Aucune récitation disponible            │
+│                                             │
+│    Vérifiez votre connexion internet       │
+└────────────────────────────────────────────┘
+```
+
+## Recitation Item Layout
+
+```
+┌──────────────────────────────────────────────┐
+│  [12]  Al-Yusuf                         ▶ ⏹ │
+│        يوسف                                  │
+│        🔊 111 versets  ⏱ 15:30              │
+└──────────────────────────────────────────────┘
+```
+
+When playing, the item gets:
+- Primary color border
+- Slightly transparent background
+- Primary color circle with Surah number
+
+## State Management
+
+The component tracks playing states for all recitations:
+
+```js
+const [playingStates, setPlayingStates] = useState({});
+
+// State structure:
+// {
+//   '1': { isPlaying: true, isLoading: false },
+//   '2': { isPlaying: false, isLoading: false },
+//   ...
+// }
+
+const updatePlayingState = (recitationId, state) => {
+  setPlayingStates(prev => ({
+    ...prev,
+    [recitationId]: state
+  }));
+};
+```
+
+## Integration with SimpleAudioControls
+
+Each recitation item includes embedded audio controls:
+
+```jsx
+<SimpleAudioControls
+  audioUrl={generateAudioUrl(item)}
+  title={item.name}
+  onStateChange={(state) => updatePlayingState(item.id, state)}
+/>
+```
+
+See the [SimpleAudioControls](/components/audio-controls) documentation for details.
+
+## Styling
+
+The component uses the theme system:
+
+- `GRADIENTS.card` for normal items
+- Primary color gradient for playing items
+- `BORDER_RADIUS.md` for cards
+- `SHADOWS.base` for elevation
+- `SPACING` constants for consistent padding
+
+## Performance Optimization
+
+<Note>
+  The component uses `FlatList` for optimal performance with large datasets:
+  - Only renders visible items
+  - Efficient scrolling
+  - Memory-efficient for 114 Surahs
+  - Uses `keyExtractor` for stable keys
+</Note>
+
+## Dependencies
+
+Required packages:
+- `react-native` - FlatList, View, TouchableOpacity
+- `expo-linear-gradient` - Gradient backgrounds
+- `lucide-react-native` - Icons (Music, Volume2, Clock, Play)
+
+Internal dependencies:
+- `SimpleAudioControls` - Audio player controls
+- `CustomText` - Typography component
+- Theme constants (COLORS, SPACING, etc.)
+
+## Best Practices
+
+<CodeGroup>
+```jsx Safe Data Handling
+// Always provide default empty array
+const safeRecitations = Array.isArray(recitations) ? recitations : [];
+
+// Check for valid reciter object
+if (reciter && reciter.moshaf && Array.isArray(reciter.moshaf)) {
+  // Use reciter data
+}
+```
+
+```jsx Error Boundaries
+// Wrap in error boundary for production
+function SafeRecitationsList(props) {
+  if (!props.recitations || props.recitations.length === 0) {
+    return <EmptyState />;
+  }
+  
+  return <RecitationsList {...props} />;
+}
+```
+
+```jsx Memory Management
+// The SimpleAudioControls automatically clean up
+// when items scroll out of view. No manual cleanup needed.
+```
+</CodeGroup>

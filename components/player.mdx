@@ -1,0 +1,199 @@
+---
+title: PlayerMini
+description: Compact audio player component with full playback controls for Quranic recitations
+---
+
+## Overview
+
+The `PlayerMini` component provides a compact, feature-rich audio player specifically designed for playing Quranic recitations. It includes playback controls, progress tracking, speed adjustment, and mute functionality, all wrapped in a beautiful gradient UI.
+
+## Features
+
+- Play/pause audio playback
+- Real-time progress slider with seek capability
+- Playback speed control (0.5x to 2.0x)
+- Mute/unmute toggle
+- Time display (current position and total duration)
+- Auto-cleanup when component unmounts
+- Background audio support
+- Platform-specific shadows and styling
+
+## Props
+
+<ParamField path="audioUrl" type="string" required>
+  The URL of the audio file to play. Accepts any valid audio URL supported by Expo Audio.
+</ParamField>
+
+<ParamField path="surahName" type="string" required>
+  The name of the Surah being played. Displayed prominently in the player header.
+</ParamField>
+
+<ParamField path="surahNumber" type="number" required>
+  The number of the Surah (1-114). Displayed as "Sourate {surahNumber}" below the Surah name.
+</ParamField>
+
+<ParamField path="onClose" type="function" required>
+  Callback function triggered when the close button (X) is pressed. Used to dismiss the player.
+  
+  **Signature:** `() => void`
+</ParamField>
+
+## Usage Example
+
+### Basic Implementation
+
+```jsx
+import PlayerMini from '../components/PlayerMini';
+
+function App() {
+  const [currentAudio, setCurrentAudio] = useState(null);
+
+  const closePlayer = () => {
+    setCurrentAudio(null);
+  };
+
+  return (
+    <View>
+      {currentAudio && (
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+        }}>
+          <PlayerMini
+            audioUrl={currentAudio.audioUrl}
+            surahName={currentAudio.surahName}
+            surahNumber={currentAudio.surahNumber}
+            onClose={closePlayer}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+```
+
+### Real Usage from AppNavigator
+
+```jsx
+import PlayerMini from '../components/PlayerMini';
+import { SPACING } from '../components/ui/Theme';
+
+function AppNavigator() {
+  const [currentAudio, setCurrentAudio] = useState(null);
+
+  const closePlayer = () => {
+    setCurrentAudio(null);
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* Main navigation content */}
+      <Tab.Navigator>
+        {/* ... tabs ... */}
+      </Tab.Navigator>
+
+      {/* Floating player */}
+      {currentAudio && (
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          paddingHorizontal: SPACING.sm,
+          paddingBottom: SPACING.xs,
+        }}>
+          <PlayerMini
+            audioUrl={currentAudio.audioUrl}
+            surahName={currentAudio.surahName}
+            surahNumber={currentAudio.surahNumber}
+            onClose={closePlayer}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+```
+
+## Playback Speed Options
+
+The component cycles through these playback rates when the speed button is tapped:
+
+- 0.5x (half speed)
+- 0.75x (three-quarters speed)
+- 1.0x (normal speed - default)
+- 1.25x
+- 1.5x
+- 2.0x (double speed)
+
+## Audio Configuration
+
+The component automatically configures audio playback with these settings:
+
+```js
+{
+  allowsRecordingIOS: false,
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: true,
+}
+```
+
+This ensures:
+- Audio plays even when the device is in silent mode (iOS)
+- Audio continues playing when the app is in the background
+- Recording is disabled to prevent conflicts
+
+## State Management
+
+The component manages several internal states:
+
+- `sound` - The Expo Audio Sound instance
+- `isPlaying` - Whether audio is currently playing
+- `duration` - Total duration in milliseconds
+- `position` - Current playback position in milliseconds
+- `playbackRate` - Current playback speed (1.0 = normal)
+- `isMuted` - Whether audio is muted
+
+## Styling
+
+The component uses:
+- `LinearGradient` with `GRADIENTS.primary` colors
+- Platform-specific shadows (iOS shadow properties, Android elevation)
+- `BORDER_RADIUS.lg` for rounded corners
+- Theme colors from `COLORS` and spacing from `SPACING`
+
+## Controls
+
+<Tabs>
+  <Tab title="Play/Pause Button">
+    Large circular button in the center with Play or Pause icon. The button has a white background with primary color icon.
+  </Tab>
+  <Tab title="Mute Toggle">
+    Left control button showing Volume2 icon when unmuted, VolumeX icon when muted.
+  </Tab>
+  <Tab title="Speed Control">
+    Right control button with FastForward icon. Tap to cycle through playback speeds.
+  </Tab>
+  <Tab title="Progress Slider">
+    Interactive slider showing current position. Drag to seek to different positions in the audio.
+  </Tab>
+  <Tab title="Close Button">
+    X icon in the top-right corner. Triggers the `onClose` callback.
+  </Tab>
+</Tabs>
+
+## Dependencies
+
+Required packages:
+- `expo-audio` - Audio playback
+- `expo-linear-gradient` - Gradient backgrounds
+- `@react-native-community/slider` - Progress slider
+- `lucide-react-native` - Icons
+
+<Note>
+  The component automatically unloads the audio when unmounting to prevent memory leaks. Always ensure the `onClose` callback properly cleans up the parent state.
+</Note>

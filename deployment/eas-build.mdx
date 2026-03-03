@@ -1,0 +1,398 @@
+---
+title: 'EAS Build'
+description: 'Build AlXuraan for iOS and Android using Expo Application Services (EAS)'
+---
+
+## Overview
+
+EAS Build is Expo's cloud-based build service that compiles your app for iOS and Android without requiring local setup. AlXuraan uses EAS Build for creating development, preview, and production builds.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install EAS CLI">
+    Install the EAS CLI globally:
+    
+    ```bash
+    npm install -g eas-cli
+    ```
+  </Step>
+  
+  <Step title="Login to Expo">
+    Authenticate with your Expo account:
+    
+    ```bash
+    eas login
+    ```
+  </Step>
+  
+  <Step title="Configure EAS Project">
+    AlXuraan is already configured with EAS project ID:
+    
+    ```typescript
+    extra: {
+      eas: {
+        projectId: '3be13992-bd7b-47fc-b456-9ae6d1930709'
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Build Profiles
+
+AlXuraan's `eas.json` defines three build profiles optimized for different use cases:
+
+### Development Profile
+
+The development profile creates a debug build with the Expo dev client:
+
+```json
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    }
+  }
+}
+```
+
+**Key Features:**
+- Includes Expo dev client for live updates
+- Internal distribution (not for app stores)
+- Debug mode enabled
+- Faster build times
+
+**Build Command:**
+```bash
+npm run build:dev
+```
+
+Or directly:
+```bash
+eas build --profile development --platform ios
+eas build --profile development --platform android
+```
+
+<Note>
+  Development builds are perfect for testing on physical devices without running local builds.
+</Note>
+
+### Preview Profile
+
+The preview profile creates production-like builds for internal testing:
+
+```json
+{
+  "build": {
+    "preview": {
+      "distribution": "internal"
+    }
+  }
+}
+```
+
+**Key Features:**
+- Production-optimized code
+- Internal distribution (TestFlight/Internal Testing)
+- No dev client included
+- Full performance optimization
+
+**Build Command:**
+```bash
+npm run build:preview
+```
+
+Or directly:
+```bash
+eas build --profile preview --platform ios
+eas build --profile preview --platform android
+```
+
+<Info>
+  Use preview builds for QA testing and stakeholder reviews before app store submission.
+</Info>
+
+### Production Profile
+
+The production profile creates app store-ready builds:
+
+```json
+{
+  "build": {
+    "production": {}
+  }
+}
+```
+
+**Key Features:**
+- Fully optimized for production
+- Store distribution ready
+- Maximum performance
+- Smallest bundle size
+
+**Build Command:**
+```bash
+npm run build:prod
+```
+
+Or directly:
+```bash
+eas build --profile production --platform ios
+eas build --profile production --platform android
+```
+
+<Warning>
+  Production builds require proper signing credentials configured in your Expo account.
+</Warning>
+
+## Complete eas.json Configuration
+
+Here's AlXuraan's complete EAS configuration:
+
+```json
+{
+  "cli": {
+    "version": ">= 10.2.4"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
+```
+
+## Building for Specific Platforms
+
+### iOS Builds
+
+Build only for iOS:
+
+<CodeGroup>
+
+```bash Development
+eas build --profile development --platform ios
+```
+
+```bash Preview
+eas build --profile preview --platform ios
+```
+
+```bash Production
+eas build --profile production --platform ios
+```
+
+</CodeGroup>
+
+**iOS Requirements:**
+- Apple Developer account
+- Bundle identifier: `com.devdiop.alxuraan`
+- App Store Connect access (for production)
+- Distribution certificate and provisioning profile
+
+### Android Builds
+
+Build only for Android:
+
+<CodeGroup>
+
+```bash Development
+eas build --profile development --platform android
+```
+
+```bash Preview
+eas build --profile preview --platform android
+```
+
+```bash Production
+eas build --profile production --platform android
+```
+
+</CodeGroup>
+
+**Android Requirements:**
+- Google Play Developer account
+- Package name: `com.devdiop.alxuraan`
+- Android keystore for signing
+
+### Build Both Platforms
+
+Build for iOS and Android simultaneously:
+
+```bash
+eas build --profile production --platform all
+```
+
+## Managing Build Credentials
+
+### iOS Credentials
+
+EAS can automatically manage iOS signing credentials:
+
+```bash
+eas credentials
+```
+
+Select iOS and choose:
+- **Distribution Certificate**: For App Store builds
+- **Provisioning Profile**: Links your app to the certificate
+- **Push Notification Key**: For notifications (optional)
+
+<Info>
+  EAS can generate and manage credentials automatically, or you can provide your own from Apple Developer Portal.
+</Info>
+
+### Android Credentials
+
+For Android, EAS manages your signing keystore:
+
+```bash
+eas credentials
+```
+
+Select Android to:
+- Generate a new keystore
+- Upload an existing keystore
+- Update keystore passwords
+
+<Warning>
+  Keep your Android keystore backup safe. Losing it means you cannot update your app on Google Play.
+</Warning>
+
+## Monitoring Builds
+
+### View Build Status
+
+Check build progress:
+
+```bash
+eas build:list
+```
+
+### View Build Details
+
+Get detailed information about a specific build:
+
+```bash
+eas build:view [build-id]
+```
+
+### Build Dashboard
+
+View all builds in the web dashboard:
+
+```bash
+eas build:list --platform all
+```
+
+Or visit: https://expo.dev/accounts/[your-account]/projects/alxuraan/builds
+
+## Local Builds
+
+You can also run EAS builds locally (requires local native setup):
+
+```bash
+eas build --profile production --platform ios --local
+```
+
+<Note>
+  Local EAS builds require the same native development environment as regular builds (Xcode for iOS, Android Studio for Android).
+</Note>
+
+## Build Optimization
+
+### Reducing Build Time
+
+- Use development profile for testing builds
+- Enable build caching (automatic in EAS)
+- Build only the platform you need
+
+### Reducing Bundle Size
+
+- Remove unused dependencies
+- Enable Hermes for Android (enabled by default in Expo 50+)
+- Optimize images and assets
+- Use production profile for final builds
+
+## App Configuration
+
+AlXuraan's app configuration in `app.config.ts` includes:
+
+<CodeGroup>
+
+```typescript iOS Configuration
+{
+  ios: {
+    bundleIdentifier: 'com.devdiop.alxuraan',
+    supportsTablet: true,
+    infoPlist: {
+      UIBackgroundModes: ['audio']
+    }
+  }
+}
+```
+
+```typescript Android Configuration
+{
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#ffffff'
+    },
+    package: 'com.devdiop.alxuraan'
+  }
+}
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+### Build Fails with Native Module Error
+
+Ensure all native modules are compatible:
+
+```bash
+eas build:configure
+```
+
+### Credentials Issues
+
+Reset and regenerate credentials:
+
+```bash
+eas credentials
+```
+
+Then select "Remove credentials" and regenerate.
+
+### Build Queue Taking Long
+
+Check build queue status:
+
+```bash
+eas build:list
+```
+
+Consider upgrading to a paid Expo plan for priority builds.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Local Building" icon="laptop" href="/deployment/building">
+    Learn about building locally for development
+  </Card>
+  <Card title="App Store Submission" icon="store" href="/deployment/app-stores">
+    Submit your builds to app stores
+  </Card>
+</CardGroup>

@@ -1,0 +1,544 @@
+---
+title: State Management
+description: Learn how AlXuraan manages state using React Context and Zustand for global and persistent data
+---
+
+## Overview
+
+AlXuraan uses a hybrid state management approach:
+
+- **React Context** - For UI state and real-time data (theme, audio player)
+- **Zustand** - For persistent data with AsyncStorage (favorites)
+- **Local State** - For component-specific state with `useState`
+
+This architecture provides the right tool for each type of state management need.
+
+## React Context
+
+Context providers wrap the application and provide global access to shared state.
+
+### Provider Setup
+
+All Context providers are initialized in `App.jsx`:
+
+```jsx App.jsx
+import { NavigationContainer } from '@react-navigation/native';
+import { ThemeProvider } from './context/ThemeContext';
+import { PlayerProvider } from './context/PlayerContext';
+import AppNavigator from './navigation/AppNavigator';
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <PlayerProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </PlayerProvider>
+    </ThemeProvider>
+  );
+}
+```
+
+<Info>
+  Providers are nested in order of dependency. ThemeProvider is outermost as it has no dependencies.
+</Info>
+
+### Theme Context
+
+Manages the application theme (light/dark mode).
+
+<CodeGroup>
+
+```jsx context/ThemeContext.jsx
+import React, { createContext, useContext, useState } from 'react';
+
+export const ThemeContext = createContext();
+
+export const ThemeProvider = ({ children }) => {
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+```
+
+```jsx Usage in Components
+import { useTheme } from '../context/ThemeContext';
+
+function SettingsScreen() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <View>
+      <Text>Current theme: {theme}</Text>
+      <Button onPress={toggleTheme} title="Toggle Theme" />
+    </View>
+  );
+}
+```
+
+</CodeGroup>
+
+#### Theme Context API
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `theme` | `'light' \| 'dark'` | Current theme mode |
+| `toggleTheme` | `() => void` | Toggle between light and dark |
+
+### Player Context
+
+Manages the global audio player state, allowing audio playback to persist across navigation.
+
+<CodeGroup>
+
+```jsx context/PlayerContext.jsx
+import React, { createContext, useContext, useState } from 'react';
+
+const PlayerContext = createContext();
+
+export function PlayerProvider({ children }) {
+  const [currentAudio, setCurrentAudio] = useState(null);
+
+  const playAudio = (audioUrl, surahName, surahNumber) => {
+    setCurrentAudio({
+      audioUrl,
+      surahName,
+      surahNumber,
+    });
+  };
+
+  const closePlayer = () => {
+    setCurrentAudio(null);
+  };
+
+  return (
+    <PlayerContext.Provider value={{ currentAudio, playAudio, closePlayer }}>
+      {children}
+    </PlayerContext.Provider>
+  );
+}
+
+export function usePlayer() {
+  const context = useContext(PlayerContext);
+  if (!context) {
+    throw new Error('usePlayer doit être utilisé à l\'intérieur d\'un PlayerProvider');
+  }
+  return context;
+}
+```
+
+```jsx Usage Example
+import { usePlayer } from '../context/PlayerContext';
+
+function SurahCard({ surah }) {
+  const { playAudio } = usePlayer();
+
+  const handlePlay = () => {
+    playAudio(
+      surah.audioUrl,
+      surah.name,
+      surah.number
+    );
+  };
+
+  return (
+    <TouchableOpacity onPress={handlePlay}>
+      <Text>{surah.name}</Text>
+    </TouchableOpacity>
+  );
+}
+```
+
+```jsx AppNavigator Integration
+import { usePlayer } from '../context/PlayerContext';
+import PlayerMini from '../components/PlayerMini';
+
+export default function AppNavigator() {
+  const { currentAudio, closePlayer } = usePlayer();
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator {...config} />
+      
+      {currentAudio && (
+        <PlayerMini
+          audioUrl={currentAudio.audioUrl}
+          surahName={currentAudio.surahName}
+          surahNumber={currentAudio.surahNumber}
+          onClose={closePlayer}
+        />
+      )}
+    </View>
+  );
+}
+```
+
+</CodeGroup>
+
+#### Player Context API
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `currentAudio` | `AudioState \| null` | Currently playing audio info |
+| `playAudio` | `(url, name, number) => void` | Start playing audio |
+| `closePlayer` | `() => void` | Stop and close player |
+
+**AudioState Type:**
+```typescript
+type AudioState = {
+  audioUrl: string;
+  surahName: string;
+  surahNumber: number;
+};
+```
+
+<Note>
+  The `usePlayer` hook includes error handling to ensure it's used within the `PlayerProvider`.
+</Note>
+
+## Zustand Store
+
+Zustand provides lightweight, performant global state management with built-in persistence.
+
+### Favorites Store
+
+The main Zustand store manages user favorites with AsyncStorage persistence.
+
+<CodeGroup>
+
+```javascript store/store.js
+import create from 'zustand';
+import { setItem, getItem } from '../utils/storage';
+
+const useStore = create((set) => ({
+  favorites: [],
+  
+  loadFavorites: async () => {
+    const savedFavorites = await getItem('favorites');
+    if (savedFavorites) {
+      set({ favorites: savedFavorites });
+    }
+  },
+  
+  addFavorite: async (favorite) => {
+    set((state) => {
+      const newFavorites = [...state.favorites, favorite];
+      setItem('favorites', newFavorites);
+      return { favorites: newFavorites };
+    });
+  },
+  
+  removeFavorite: async (suraNumber, ayaNumber) => {
+    set((state) => {
+      const newFavorites = state.favorites.filter(
+        (fav) => !(fav.suraNumber === suraNumber && fav.ayaNumber === ayaNumber)
+      );
+      setItem('favorites', newFavorites);
+      return { favorites: newFavorites };
+    });
+  },
+}));
+
+// Load favorites on app startup
+useStore.getState().loadFavorites();
+
+export default useStore;
+```
+
+```jsx Usage in Components
+import useStore from '../store/store';
+
+function AyahCard({ surah, ayah }) {
+  const favorites = useStore((state) => state.favorites);
+  const addFavorite = useStore((state) => state.addFavorite);
+  const removeFavorite = useStore((state) => state.removeFavorite);
+
+  const isFavorite = favorites.some(
+    (fav) => fav.suraNumber === surah && fav.ayaNumber === ayah
+  );
+
+  const toggleFavorite = () => {
+    if (isFavorite) {
+      removeFavorite(surah, ayah);
+    } else {
+      addFavorite({ suraNumber: surah, ayaNumber: ayah });
+    }
+  };
+
+  return (
+    <View>
+      <Text>Ayah {ayah}</Text>
+      <TouchableOpacity onPress={toggleFavorite}>
+        <Star fill={isFavorite ? 'gold' : 'none'} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+```
+
+</CodeGroup>
+
+### Store API
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `favorites` | `Favorite[]` | Array of favorite items |
+| `loadFavorites` | `() => Promise<void>` | Load favorites from storage |
+| `addFavorite` | `(favorite) => Promise<void>` | Add item to favorites |
+| `removeFavorite` | `(sura, aya) => Promise<void>` | Remove item from favorites |
+
+**Favorite Type:**
+```typescript
+type Favorite = {
+  suraNumber: number;
+  ayaNumber: number;
+};
+```
+
+### Zustand Selectors
+
+Use selectors to subscribe to specific parts of the store:
+
+```jsx Selector Pattern
+// ❌ Bad - subscribes to entire store
+const store = useStore();
+
+// ✅ Good - subscribes only to favorites
+const favorites = useStore((state) => state.favorites);
+
+// ✅ Good - subscribes only to actions
+const addFavorite = useStore((state) => state.addFavorite);
+```
+
+<Info>
+  Using selectors prevents unnecessary re-renders by only subscribing to the specific state you need.
+</Info>
+
+## AsyncStorage Utilities
+
+The `utils/storage.js` module provides wrapper functions for AsyncStorage operations.
+
+```javascript utils/storage.js
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const setItem = async (key, value) => {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde des données:', error);
+  }
+};
+
+export const getItem = async (key) => {
+  try {
+    const value = await AsyncStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données:', error);
+    return null;
+  }
+};
+
+export const removeItem = async (key) => {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch (error) {
+    console.error('Erreur lors de la suppression des données:', error);
+  }
+};
+
+export const clearStorage = async () => {
+  try {
+    await AsyncStorage.clear();
+  } catch (error) {
+    console.error('Erreur lors de la suppression de toutes les données:', error);
+  }
+};
+```
+
+### Storage API
+
+| Function | Parameters | Returns | Description |
+|----------|------------|---------|-------------|
+| `setItem` | `key, value` | `Promise<void>` | Save data to storage |
+| `getItem` | `key` | `Promise<any>` | Retrieve data from storage |
+| `removeItem` | `key` | `Promise<void>` | Remove specific item |
+| `clearStorage` | - | `Promise<void>` | Clear all storage |
+
+<Note>
+  All storage functions automatically handle JSON serialization/deserialization.
+</Note>
+
+## State Management Patterns
+
+### When to Use Each Approach
+
+<Accordion title="React Context">
+  **Use Context for:**
+  - UI state (theme, modals, toasts)
+  - Real-time data that changes frequently
+  - State needed across many components
+  - Authentication state
+  - Audio player state
+
+  **Example:**
+  ```jsx
+  const { theme, toggleTheme } = useTheme();
+  const { currentAudio, playAudio } = usePlayer();
+  ```
+</Accordion>
+
+<Accordion title="Zustand Store">
+  **Use Zustand for:**
+  - Persistent data (favorites, settings)
+  - Data synchronized with AsyncStorage
+  - Complex state logic
+  - Performance-critical state
+  - Large arrays or objects
+
+  **Example:**
+  ```jsx
+  const favorites = useStore((state) => state.favorites);
+  const addFavorite = useStore((state) => state.addFavorite);
+  ```
+</Accordion>
+
+<Accordion title="Local State">
+  **Use useState for:**
+  - Component-specific state
+  - Form inputs
+  - Toggle states
+  - Temporary UI state
+  - Loading states
+
+  **Example:**
+  ```jsx
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  ```
+</Accordion>
+
+### Creating New Context
+
+When adding new Context providers:
+
+```jsx New Context Template
+import React, { createContext, useContext, useState } from 'react';
+
+const MyContext = createContext();
+
+export function MyProvider({ children }) {
+  const [state, setState] = useState(initialState);
+
+  const value = {
+    state,
+    // ... methods
+  };
+
+  return (
+    <MyContext.Provider value={value}>
+      {children}
+    </MyContext.Provider>
+  );
+}
+
+export function useMyContext() {
+  const context = useContext(MyContext);
+  if (!context) {
+    throw new Error('useMyContext must be used within MyProvider');
+  }
+  return context;
+}
+```
+
+### Extending Zustand Store
+
+To add new stores or extend the existing one:
+
+```javascript Adding Store Slices
+import create from 'zustand';
+
+const useStore = create((set) => ({
+  // Favorites slice
+  favorites: [],
+  addFavorite: (fav) => set((state) => ({ 
+    favorites: [...state.favorites, fav] 
+  })),
+  
+  // New slice - Recent items
+  recentItems: [],
+  addRecentItem: (item) => set((state) => ({
+    recentItems: [item, ...state.recentItems].slice(0, 10)
+  })),
+  clearRecent: () => set({ recentItems: [] }),
+}));
+```
+
+## Performance Optimization
+
+### Memoization with Context
+
+```jsx Optimized Provider
+import { useMemo } from 'react';
+
+export function PlayerProvider({ children }) {
+  const [currentAudio, setCurrentAudio] = useState(null);
+
+  const value = useMemo(
+    () => ({
+      currentAudio,
+      playAudio: (url, name, number) => {
+        setCurrentAudio({ audioUrl: url, surahName: name, surahNumber: number });
+      },
+      closePlayer: () => setCurrentAudio(null),
+    }),
+    [currentAudio]
+  );
+
+  return (
+    <PlayerContext.Provider value={value}>
+      {children}
+    </PlayerContext.Provider>
+  );
+}
+```
+
+### Selective Subscriptions
+
+```jsx Optimized Zustand Usage
+// Only re-render when favorites.length changes
+const favoritesCount = useStore(
+  (state) => state.favorites.length
+);
+
+// Custom equality function
+const favoriteIds = useStore(
+  (state) => state.favorites.map(f => f.id),
+  (a, b) => JSON.stringify(a) === JSON.stringify(b)
+);
+```
+
+## Best Practices
+
+1. **Context Splitting**: Create separate contexts for different concerns
+2. **Avoid Over-Rendering**: Use selectors in Zustand to subscribe to specific state
+3. **Error Boundaries**: Wrap providers in error boundaries for resilience
+4. **Type Safety**: Add TypeScript types for state and actions
+5. **Persistence**: Always handle AsyncStorage errors gracefully
+6. **Initialization**: Load persisted state before rendering UI
+7. **Cleanup**: Remove listeners and clear state on unmount when needed
+
+<Info>
+  Always prefer the simplest solution. Start with local state, move to Context when needed across components, and use Zustand for persistence.
+</Info>

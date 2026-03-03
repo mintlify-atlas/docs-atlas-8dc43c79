@@ -1,0 +1,569 @@
+---
+title: Notification Service
+description: Service for managing push notifications for prayer times and reminders
+---
+
+The Notification Service provides a simple interface for requesting notification permissions, scheduling prayer notifications, and testing notification functionality using Expo Notifications.
+
+## Overview
+
+This service handles:
+- Notification permission requests
+- Prayer time notifications (with reminders)
+- Test notifications for debugging
+- Device compatibility checks
+
+<Warning>
+Notifications only work on physical devices. They will not function on emulators or simulators.
+</Warning>
+
+---
+
+## Core Functions
+
+### requestPermissions()
+
+Requests notification permissions from the user and checks device compatibility.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+<ResponseField name="granted" type="boolean">
+  True if notification permissions are granted, false otherwise
+</ResponseField>
+
+<CodeGroup>
+```javascript Usage Example
+import { notificationService } from '../services/notificationService';
+
+const setupNotifications = async () => {
+  const hasPermission = await notificationService.requestPermissions();
+  
+  if (hasPermission) {
+    console.log('Notifications enabled');
+    // Proceed to schedule notifications
+  } else {
+    console.log('Notification permissions denied');
+  }
+};
+```
+
+```javascript From HomeScreen.jsx
+import { notificationService } from '../services/notificationService';
+
+const fetchData = async () => {
+  // Request notification permissions
+  const notificationPermission = await notificationService.requestPermissions();
+  setNotificationsEnabled(notificationPermission);
+  
+  // Schedule notifications if permissions granted
+  if (notificationPermission && prayerTimes) {
+    await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+  }
+};
+```
+</CodeGroup>
+
+**Permission Flow:**
+
+1. Checks if running on physical device
+2. Checks existing permission status
+3. Requests permission if not already granted
+4. Returns final permission status
+
+<Note>
+On first call, this will show the system permission dialog to the user.
+</Note>
+
+---
+
+### schedulePrayerNotification(prayerName, prayerTime)
+
+Schedules a single notification 15 minutes before a prayer time.
+
+<ParamField path="prayerName" type="string" required>
+  Name of the prayer (e.g., "Fajr", "Dhuhr")
+</ParamField>
+
+<ParamField path="prayerTime" type="Date" required>
+  JavaScript Date object representing the prayer time
+</ParamField>
+
+```javascript
+import { notificationService } from '../services/notificationService';
+
+const scheduleNextPrayer = async () => {
+  const fajrTime = new Date();
+  fajrTime.setHours(5, 30, 0); // 5:30 AM
+  
+  await notificationService.schedulePrayerNotification('Fajr', fajrTime);
+  // Notification will be sent at 5:15 AM (15 minutes before)
+};
+```
+
+**Notification Details:**
+- **Title**: `Rappel de prière : {prayerName}`
+- **Body**: `La prière de {prayerName} est dans 15 minutes`
+- **Sound**: Enabled
+- **Trigger**: 15 minutes before prayer time
+
+<Warning>
+The prayerTime parameter must be a valid JavaScript Date object, not a string.
+</Warning>
+
+---
+
+### scheduleAllPrayerNotifications(prayerTimes)
+
+Schedules notifications for all five daily prayers. Cancels any existing scheduled notifications first.
+
+<ParamField path="prayerTimes" type="Object" required>
+  Object containing all prayer times
+  
+  <ParamField path="prayerTimes.Fajr" type="Date" required>
+    Fajr (dawn) prayer time
+  </ParamField>
+  
+  <ParamField path="prayerTimes.Dhuhr" type="Date" required>
+    Dhuhr (noon) prayer time
+  </ParamField>
+  
+  <ParamField path="prayerTimes.Asr" type="Date" required>
+    Asr (afternoon) prayer time
+  </ParamField>
+  
+  <ParamField path="prayerTimes.Maghrib" type="Date" required>
+    Maghrib (sunset) prayer time
+  </ParamField>
+  
+  <ParamField path="prayerTimes.Isha" type="Date" required>
+    Isha (night) prayer time
+  </ParamField>
+</ParamField>
+
+<CodeGroup>
+```javascript Usage Example
+import { notificationService } from '../services/notificationService';
+
+const setupDailyNotifications = async () => {
+  const today = new Date();
+  
+  const prayerTimes = {
+    Fajr: new Date(today.setHours(5, 30)),
+    Dhuhr: new Date(today.setHours(13, 15)),
+    Asr: new Date(today.setHours(16, 45)),
+    Maghrib: new Date(today.setHours(19, 30)),
+    Isha: new Date(today.setHours(20, 45))
+  };
+  
+  await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+  console.log('All prayer notifications scheduled');
+};
+```
+
+```javascript From HomeScreen.jsx
+import { notificationService } from '../services/notificationService';
+
+const fetchData = async () => {
+  // Get prayer times from API
+  const times = await aladhanService.getPrayerTimes(latitude, longitude);
+  
+  // Convert string times to Date objects
+  const prayerTimes = {
+    Fajr: parseTime(times.Fajr),
+    Dhuhr: parseTime(times.Dhuhr),
+    Asr: parseTime(times.Asr),
+    Maghrib: parseTime(times.Maghrib),
+    Isha: parseTime(times.Isha)
+  };
+  
+  // Schedule all notifications
+  if (notificationPermission) {
+    await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+  }
+};
+
+function parseTime(timeString) {
+  const [hours, minutes] = timeString.split(':');
+  const date = new Date();
+  date.setHours(parseInt(hours), parseInt(minutes), 0);
+  return date;
+}
+```
+</CodeGroup>
+
+**What it does:**
+
+1. Cancels all previously scheduled notifications
+2. Schedules 5 new notifications (one per prayer)
+3. Each notification triggers 15 minutes before prayer time
+
+<Note>
+This function automatically clears old notifications to prevent duplicates.
+</Note>
+
+---
+
+### testNotification()
+
+Sends an immediate test notification for debugging purposes.
+
+<ParamField query="none" type="none">
+  No parameters required
+</ParamField>
+
+```javascript
+import { notificationService } from '../services/notificationService';
+
+const handleTestButton = async () => {
+  await notificationService.testNotification();
+  // Notification appears immediately
+};
+```
+
+**Test Notification:**
+- **Title**: "Test de notification"
+- **Body**: "Ceci est un test de notification"
+- **Sound**: Enabled
+- **Trigger**: Immediate (null trigger)
+
+<Note>
+Use this function to verify that notifications are working correctly on the user's device.
+</Note>
+
+---
+
+## Configuration
+
+The notification handler is configured at the service level:
+
+```javascript notificationService.jsx
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,    // Show notification banner
+    shouldPlaySound: true,    // Play notification sound
+    shouldSetBadge: false,    // Don't update app badge
+  }),
+});
+```
+
+**Settings:**
+- **shouldShowAlert**: Always show notification banner
+- **shouldPlaySound**: Always play notification sound
+- **shouldSetBadge**: Never update app icon badge
+
+---
+
+## Device Compatibility
+
+The service includes device type detection:
+
+```javascript
+import * as Device from 'expo-device';
+
+if (!Device.isDevice) {
+  console.log('Les notifications ne fonctionnent pas sur les émulateurs');
+  return false;
+}
+```
+
+**Supported Platforms:**
+- iOS physical devices
+- Android physical devices
+
+**Not Supported:**
+- iOS Simulator
+- Android Emulator
+- Web browsers
+
+---
+
+## Integration with Prayer Times Service
+
+The Notification Service works closely with the Prayer Times Service:
+
+```javascript Complete Integration Example
+import { notificationService } from '../services/notificationService';
+import { 
+  getUserLocation, 
+  getPrayerTimesByCoords 
+} from '../services/prayerTimesService';
+
+const setupPrayerNotifications = async () => {
+  // Step 1: Request notification permissions
+  const hasPermission = await notificationService.requestPermissions();
+  
+  if (!hasPermission) {
+    console.log('Notification permissions denied');
+    return;
+  }
+  
+  // Step 2: Get user location
+  const location = await getUserLocation();
+  
+  if (!location) {
+    console.log('Location access denied');
+    return;
+  }
+  
+  // Step 3: Fetch prayer times
+  const times = await getPrayerTimesByCoords(
+    location.latitude,
+    location.longitude
+  );
+  
+  // Step 4: Parse prayer times to Date objects
+  const prayerTimes = {
+    Fajr: parseTimeString(times.Fajr),
+    Dhuhr: parseTimeString(times.Dhuhr),
+    Asr: parseTimeString(times.Asr),
+    Maghrib: parseTimeString(times.Maghrib),
+    Isha: parseTimeString(times.Isha)
+  };
+  
+  // Step 5: Schedule all notifications
+  await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+  console.log('Prayer notifications scheduled successfully');
+};
+
+function parseTimeString(timeString) {
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+```
+
+---
+
+## Permission States
+
+The service handles three permission states:
+
+<CardGroup cols={3}>
+  <Card title="Granted" icon="check" color="green">
+    User has allowed notifications
+    - Can schedule notifications
+    - Notifications will be delivered
+  </Card>
+  
+  <Card title="Denied" icon="x" color="red">
+    User has denied notifications
+    - Cannot schedule notifications
+    - Must enable in device settings
+  </Card>
+  
+  <Card title="Not Determined" icon="question" color="yellow">
+    User hasn't been asked yet
+    - Will show permission dialog
+    - First time app is requesting
+  </Card>
+</CardGroup>
+
+```javascript
+const { status: existingStatus } = await Notifications.getPermissionsAsync();
+
+if (existingStatus === 'granted') {
+  // Already have permission
+} else if (existingStatus === 'denied') {
+  // User previously denied - direct to settings
+} else {
+  // Not determined - request permission
+  const { status } = await Notifications.requestPermissionsAsync();
+}
+```
+
+---
+
+## Error Handling
+
+The service handles errors gracefully:
+
+```javascript
+try {
+  await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+} catch (error) {
+  console.error('Failed to schedule notifications:', error);
+  // Notifications not scheduled, but app continues to work
+}
+```
+
+**Common Error Cases:**
+- Notifications disabled in device settings
+- Invalid date objects passed
+- Device compatibility issues
+- Expo Notifications module not configured
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Request Permissions First">
+    Before scheduling any notifications, always check and request permissions:
+    
+    ```javascript
+    const hasPermission = await notificationService.requestPermissions();
+    if (hasPermission) {
+      // Now safe to schedule notifications
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Reschedule Daily">
+    Prayer times change daily. Reschedule notifications each day:
+    
+    ```javascript
+    // Run daily at midnight
+    const updateDailyNotifications = async () => {
+      const times = await getPrayerTimesByCoords(lat, lng);
+      await notificationService.scheduleAllPrayerNotifications(times);
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Handle Permission Changes">
+    Users can revoke permissions in settings. Check permissions periodically:
+    
+    ```javascript
+    useEffect(() => {
+      const checkPermissions = async () => {
+        const hasPermission = await notificationService.requestPermissions();
+        setNotificationsEnabled(hasPermission);
+      };
+      
+      checkPermissions();
+    }, []);
+    ```
+  </Accordion>
+  
+  <Accordion title="Test on Real Devices">
+    Always test notifications on physical devices:
+    
+    ```javascript
+    // Add a test button in development
+    <Button 
+      title="Test Notification" 
+      onPress={notificationService.testNotification}
+    />
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Notification Channels (Android)
+
+For Android, use the Prayer Times Service's `setupNotifications()` function which creates a dedicated notification channel:
+
+```javascript
+import { setupNotifications } from '../services/prayerTimesService';
+
+await setupNotifications();
+// Creates "prayer-times" channel with:
+// - High importance
+// - Sound enabled
+// - Vibration pattern
+// - Custom light color
+```
+
+This provides better notification management on Android devices.
+
+---
+
+## Complete Example: Settings Toggle
+
+Here's a complete example of a notification toggle in settings:
+
+```javascript NotificationToggle.jsx
+import React, { useState, useEffect } from 'react';
+import { Switch, Text, View, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationService } from '../services/notificationService';
+import { 
+  getUserLocation, 
+  getPrayerTimesByCoords 
+} from '../services/prayerTimesService';
+
+export default function NotificationToggle() {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    loadSetting();
+  }, []);
+  
+  const loadSetting = async () => {
+    const saved = await AsyncStorage.getItem('notificationsEnabled');
+    setEnabled(saved === 'true');
+  };
+  
+  const toggleNotifications = async (value) => {
+    setLoading(true);
+    
+    try {
+      if (value) {
+        // Enable notifications
+        const hasPermission = await notificationService.requestPermissions();
+        
+        if (!hasPermission) {
+          Alert.alert(
+            'Permission Required',
+            'Please enable notifications in device settings'
+          );
+          setLoading(false);
+          return;
+        }
+        
+        // Get prayer times and schedule
+        const location = await getUserLocation();
+        if (location) {
+          const times = await getPrayerTimesByCoords(
+            location.latitude,
+            location.longitude
+          );
+          
+          // Convert and schedule
+          const prayerTimes = convertPrayerTimes(times);
+          await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+        }
+      } else {
+        // Disable notifications
+        await Notifications.cancelAllScheduledNotificationsAsync();
+      }
+      
+      // Save setting
+      setEnabled(value);
+      await AsyncStorage.setItem('notificationsEnabled', value.toString());
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      Alert.alert('Error', 'Failed to update notification settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Text>Prayer Notifications</Text>
+      <Switch
+        value={enabled}
+        onValueChange={toggleNotifications}
+        disabled={loading}
+      />
+    </View>
+  );
+}
+
+function convertPrayerTimes(times) {
+  const result = {};
+  ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].forEach(prayer => {
+    const [hours, minutes] = times[prayer].split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    result[prayer] = date;
+  });
+  return result;
+}
+```

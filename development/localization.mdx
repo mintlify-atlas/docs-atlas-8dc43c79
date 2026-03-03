@@ -1,0 +1,449 @@
+---
+title: Localization & Multi-Language Support
+description: Learn how AlXuraan implements multi-language support for French, Arabic, and Wolof translations
+---
+
+## Overview
+
+AlXuraan provides comprehensive multi-language support with three main languages:
+
+- **French** (Français) - Default interface language
+- **Arabic** (عربية) - Original Quranic text and Hadith
+- **Wolof** - Indigenous Senegalese language for Quran translations
+
+The localization system is implemented through AsyncStorage for persistent language preferences and dynamic content loading from APIs and local JSON files.
+
+## Language Support by Feature
+
+<Tabs>
+  <Tab title="Quran">
+    ### Quran Translation Languages
+    
+    - **Arabic** - Original Quranic text (Uthmani script)
+    - **French** - Hameedullah translation
+    - **Wolof** - Community translations (selected Surahs)
+    
+    ```jsx
+    // Check if Surah has Wolof translation
+    import { hasWolofTranslation } from '../services/quranService';
+    
+    const haswolof = hasWolofTranslation(1); // true/false
+    ```
+  </Tab>
+  
+  <Tab title="Hadith">
+    ### Hadith Translation Languages
+    
+    AlXuraan supports multiple languages for Hadith collections:
+    
+    - **Arabic** (ara) - Original Hadith text
+    - **French** (fra) - French translations
+    - **English** (eng) - English translations
+    
+    ```jsx
+    const LANGUAGE_PREFIX_MAP = {
+      'fr': 'fra',
+      'ar': 'ara',
+      'en': 'eng'
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Interface">
+    ### Interface Language
+    
+    The UI is primarily in French with Arabic support for:
+    - Prayer times
+    - Quranic verses
+    - Hadith text
+    - Hijri calendar dates
+  </Tab>
+</Tabs>
+
+## Hadith Language System
+
+### Available Languages
+
+The Hadith service exposes language options through the `HadithService.languages` object:
+
+```jsx services/hadithService.jsx
+const HadithService = {
+  languages: {
+    'fr': 'Français',
+    'ar': 'العربية',
+    'en': 'English'
+  }
+};
+```
+
+### Language Selection UI
+
+Implement language selection in your settings:
+
+```jsx HadithSettings.jsx
+import React, { useState } from 'react';
+import { TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import HadithService from '../services/hadithService';
+import { CustomText } from '../components/ui/Typography';
+import { COLORS, SPACING, BORDER_RADIUS } from '../components/ui/Theme';
+
+export default function HadithSettings() {
+  const [selectedLanguage, setSelectedLanguage] = useState('fr');
+  const [availableLanguages] = useState(
+    Object.entries(HadithService.languages)
+  );
+
+  const handleLanguageChange = async (language) => {
+    setSelectedLanguage(language);
+    try {
+      await AsyncStorage.setItem('@hadith_language', language);
+    } catch (error) {
+      console.error('Error saving language:', error);
+    }
+  };
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm }}>
+      {availableLanguages.map(([code, name]) => (
+        <TouchableOpacity
+          key={code}
+          onPress={() => handleLanguageChange(code)}
+          style={{
+            backgroundColor: selectedLanguage === code 
+              ? COLORS.primary 
+              : COLORS.buttonBg,
+            paddingHorizontal: SPACING.md,
+            paddingVertical: SPACING.xs,
+            borderRadius: BORDER_RADIUS.full,
+          }}>
+          <CustomText
+            size="sm"
+            color={selectedLanguage === code 
+              ? COLORS.white 
+              : COLORS.textPrimary}>
+            {name}
+          </CustomText>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+```
+
+### Loading Language Preferences
+
+The `useHadith` hook automatically loads saved language preferences:
+
+```jsx hooks/useHadith.jsx
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const useHadith = (collectionKey, hadithNumber) => {
+  const [language, setLanguage] = useState('fr');
+
+  useEffect(() => {
+    loadLanguageSettings();
+  }, []);
+
+  const loadLanguageSettings = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem('@hadith_language');
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+      }
+    } catch (error) {
+      console.error('Error loading language settings:', error);
+    }
+  };
+
+  return { language };
+};
+```
+
+## Wolof Translation System
+
+### Overview
+
+Wolof is a major language spoken in Senegal. AlXuraan includes Wolof translations for select Quranic Surahs stored in a local JSON file.
+
+### Data Structure
+
+Wolof translations are stored in `data/quran_wolof.json`:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Al-Fatiha",
+    "verses": [
+      {
+        "number": 1,
+        "wolof": "Ci tur Yàlla bou mag, bou yërëm."
+      }
+    ]
+  }
+]
+```
+
+### Loading Wolof Translations
+
+The Quran service caches Wolof translations for performance:
+
+```jsx services/quranService.jsx
+import wolofData from '../data/quran_wolof.json';
+
+// Cache for Wolof translations
+let wolofTranslationsCache = null;
+
+// Initialize Wolof cache
+const initWolofCache = () => {
+  if (wolofTranslationsCache) return;
+
+  wolofTranslationsCache = {};
+  wolofData.forEach(sura => {
+    wolofTranslationsCache[sura.id] = {
+      name_wl: sura.name || '',
+      verses: sura.verses || []
+    };
+  });
+};
+
+/**
+ * Check if a Surah has Wolof translation
+ * @param {number} suraNumber - Surah number (1-114)
+ * @returns {boolean} - True if translation exists
+ */
+export const hasWolofTranslation = (suraNumber) => {
+  initWolofCache();
+  return !!wolofTranslationsCache[suraNumber];
+};
+```
+
+### Getting Surah Names in Multiple Languages
+
+The `getSuraNames` function returns names in Arabic, French, and Wolof:
+
+```jsx
+export const getSuraNames = async () => {
+  const response = await fetch('https://api.alquran.cloud/v1/surah');
+  const data = await response.json();
+
+  const formattedSuras = data.data.map(sura => {
+    const wolofSura = wolofData.find(ws => ws.id === sura.number);
+    return {
+      id: sura.number,
+      name_ar: sura.name,                    // Arabic name
+      name_fr: sura.englishName,             // French name
+      name_wo: wolofSura?.name || `Sourate ${sura.number}`, // Wolof name
+      hasWolofTranslation: !!wolofSura       // Translation availability
+    };
+  });
+
+  return formattedSuras;
+};
+```
+
+### Displaying Wolof Badge
+
+Show a badge for Surahs with Wolof translations:
+
+```jsx QuranScreen.jsx
+import { COLORS } from '../components/ui/Theme';
+
+<View>
+  <Text>{item.name_fr}</Text>
+  {item.hasWolofTranslation && (
+    <View style={{
+      backgroundColor: COLORS.wolofBadge,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    }}>
+      <Text style={{ color: '#000', fontSize: 10, fontWeight: 'bold' }}>
+        WOLOF
+      </Text>
+    </View>
+  )}
+</View>
+```
+
+## Hadith Collections Metadata
+
+Hadith collections are defined with language-specific editions in `data/hadith/collections.json`:
+
+```json collections.json
+{
+  "bukhari": {
+    "name": "Sahih al Bukhari",
+    "collection": [
+      {
+        "name": "ara-bukhari",
+        "language": "Arabic",
+        "direction": "rtl",
+        "link": "https://cdn.jsdelivr.net/.../ara-bukhari.json"
+      },
+      {
+        "name": "fra-bukhari",
+        "language": "French",
+        "direction": "ltr",
+        "link": "https://cdn.jsdelivr.net/.../fra-bukhari.json"
+      },
+      {
+        "name": "eng-bukhari",
+        "language": "English",
+        "direction": "ltr",
+        "link": "https://cdn.jsdelivr.net/.../eng-bukhari.json"
+      }
+    ]
+  }
+}
+```
+
+## AsyncStorage Keys
+
+Language preferences are stored using these keys:
+
+<ParamField path="@hadith_language" type="string" default="fr">
+  Current Hadith display language (fr, ar, en)
+</ParamField>
+
+<ParamField path="@hadith_font_size" type="string" default="normal">
+  Font size preference (small, normal, large)
+</ParamField>
+
+### Reading Language Preferences
+
+```jsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const loadSettings = async () => {
+  try {
+    const savedLanguage = await AsyncStorage.getItem('@hadith_language');
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+    }
+  } catch (error) {
+    console.error('Error loading language:', error);
+  }
+};
+```
+
+### Saving Language Preferences
+
+```jsx
+const saveLanguage = async (language) => {
+  try {
+    await AsyncStorage.setItem('@hadith_language', language);
+  } catch (error) {
+    console.error('Error saving language:', error);
+  }
+};
+```
+
+## Text Direction (RTL/LTR)
+
+AlXuraan handles right-to-left (RTL) text for Arabic:
+
+<CodeGroup>
+```jsx Arabic (RTL)
+<Text style={{ 
+  textAlign: 'right',
+  writingDirection: 'rtl',
+  fontFamily: 'Amiri'
+}}>
+  {hadith.hadithArabic}
+</Text>
+```
+
+```jsx French/English (LTR)
+<Text style={{ 
+  textAlign: 'left',
+  writingDirection: 'ltr'
+}}>
+  {hadith.translations[selectedLanguage]}
+</Text>
+```
+</CodeGroup>
+
+## Font Size Preferences
+
+Users can customize font sizes for better readability:
+
+```jsx
+const fontSizes = {
+  small: { arabic: 16, translation: 14 },
+  normal: { arabic: 20, translation: 16 },
+  large: { arabic: 24, translation: 18 },
+};
+
+const handleFontSizeChange = async (size) => {
+  setFontSize(size);
+  await AsyncStorage.setItem('@hadith_font_size', size);
+};
+```
+
+## Complete Example
+
+Here's a complete example showing multi-language Hadith display:
+
+```jsx HadithDetail.jsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useHadith } from '../hooks/useHadith';
+import { COLORS } from '../components/ui/Theme';
+
+export default function HadithDetail({ route }) {
+  const { collectionKey, hadithNumber } = route.params;
+  const { hadith, loading, language } = useHadith(collectionKey, hadithNumber);
+  const [fontSize, setFontSize] = useState('normal');
+
+  const fontSizes = {
+    small: { arabic: 16, translation: 14 },
+    normal: { arabic: 20, translation: 16 },
+    large: { arabic: 24, translation: 18 },
+  };
+
+  if (loading) return <Text>Loading...</Text>;
+
+  return (
+    <ScrollView>
+      {/* Arabic Text (RTL) */}
+      <Text style={{
+        fontSize: fontSizes[fontSize].arabic,
+        color: COLORS.textPrimary,
+        textAlign: 'right',
+        writingDirection: 'rtl',
+        fontFamily: 'Amiri',
+        marginBottom: 20,
+      }}>
+        {hadith.hadithArabic}
+      </Text>
+
+      {/* Translation (LTR) */}
+      <Text style={{
+        fontSize: fontSizes[fontSize].translation,
+        color: COLORS.textSecondary,
+        textAlign: 'left',
+        writingDirection: 'ltr',
+      }}>
+        {hadith.translations[language]}
+      </Text>
+    </ScrollView>
+  );
+}
+```
+
+<Note>
+  The language system is designed to be easily extensible. To add a new language, update the `HadithService.languages` object and ensure the API supports the corresponding language code.
+</Note>
+
+## Best Practices
+
+1. **Always check translation availability** - Use `hasWolofTranslation()` before displaying Wolof content
+2. **Persist language preferences** - Save user choices to AsyncStorage
+3. **Handle RTL properly** - Set `writingDirection` and `textAlign` for Arabic text
+4. **Cache translations** - Use in-memory caching for frequently accessed content
+5. **Provide fallbacks** - Show default language if preferred language is unavailable
+6. **Load async** - Always load language preferences asynchronously on mount

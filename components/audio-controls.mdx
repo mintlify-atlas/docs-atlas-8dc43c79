@@ -1,0 +1,442 @@
+---
+title: SimpleAudioControls
+description: Compact audio control buttons for inline playback with automatic state management
+---
+
+## Overview
+
+The `SimpleAudioControls` component provides a minimal set of audio playback controls (play/pause/stop) designed to be embedded inline within list items or cards. It manages its own audio instance, handles loading states, and automatically cleans up resources.
+
+## Features
+
+- Compact inline audio player
+- Play/pause/stop controls
+- Loading state with spinner
+- Automatic audio cleanup on unmount
+- Background playback support
+- Robust playback status tracking
+- Automatic finish detection
+- State change callbacks
+- Error handling with user alerts
+
+## Props
+
+<ParamField path="audioUrl" type="string" required>
+  The URL of the audio file to play. Must be a valid audio URL accessible via HTTP/HTTPS.
+</ParamField>
+
+<ParamField path="title" type="string">
+  Title of the audio (e.g., Surah name). Used for logging and potential future display.
+</ParamField>
+
+<ParamField path="onStateChange" type="function">
+  Callback triggered whenever the playback state changes.
+  
+  **Signature:** `(state: AudioState) => void`
+  
+  **State Object:**
+  ```typescript
+  {
+    isPlaying: boolean,
+    isLoading: boolean,
+    error: string | null,
+    hasFinished: boolean
+  }
+  ```
+  
+  Use this to update parent component state, such as highlighting the currently playing item.
+</ParamField>
+
+<ParamField path="size" type="number" default="24">
+  Size of the control icons in pixels. The buttons will be sized proportionally.
+</ParamField>
+
+<ParamField path="style" type="object">
+  Additional styles to apply to the controls container.
+</ParamField>
+
+## Usage Example
+
+### Basic Implementation
+
+```jsx
+import SimpleAudioControls from '../components/SimpleAudioControls';
+
+function AudioListItem({ audioUrl, title }) {
+  const [playingState, setPlayingState] = useState({});
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Text>{title}</Text>
+      <SimpleAudioControls
+        audioUrl={audioUrl}
+        title={title}
+        onStateChange={setPlayingState}
+      />
+    </View>
+  );
+}
+```
+
+### Advanced Usage with State Management
+
+```jsx
+import SimpleAudioControls from '../components/SimpleAudioControls';
+
+function RecitationItem({ recitation }) {
+  const [audioState, setAudioState] = useState({
+    isPlaying: false,
+    isLoading: false,
+    error: null,
+    hasFinished: false
+  });
+
+  const handleStateChange = (state) => {
+    setAudioState(state);
+    
+    // Additional logic based on state
+    if (state.error) {
+      console.error('Audio error:', state.error);
+    }
+    
+    if (state.hasFinished) {
+      console.log('Audio finished playing');
+      // Maybe play next recitation
+    }
+  };
+
+  return (
+    <View style={{
+      backgroundColor: audioState.isPlaying ? '#e0f2f1' : '#fff',
+      padding: 16,
+      borderRadius: 8,
+    }}>
+      <Text style={{ fontWeight: audioState.isPlaying ? 'bold' : 'normal' }}>
+        {recitation.name}
+      </Text>
+      
+      <SimpleAudioControls
+        audioUrl={recitation.audioUrl}
+        title={recitation.name}
+        onStateChange={handleStateChange}
+        size={20}
+      />
+      
+      {audioState.isLoading && <Text>Loading...</Text>}
+      {audioState.error && <Text style={{ color: 'red' }}>{audioState.error}</Text>}
+    </View>
+  );
+}
+```
+
+### Real Usage from RecitationsList
+
+```jsx
+import SimpleAudioControls from '../components/SimpleAudioControls';
+
+export default function RecitationsList({ recitations }) {
+  const [playingStates, setPlayingStates] = useState({});
+
+  const updatePlayingState = (recitationId, state) => {
+    setPlayingStates(prev => ({
+      ...prev,
+      [recitationId]: state
+    }));
+  };
+
+  const renderRecitation = ({ item }) => {
+    const playingState = playingStates[item.id] || {};
+    const isPlaying = playingState.isPlaying;
+
+    return (
+      <View style={{
+        padding: 16,
+        backgroundColor: isPlaying ? '#e3f2fd' : '#fff',
+        borderColor: isPlaying ? '#2196f3' : 'transparent',
+        borderWidth: isPlaying ? 1 : 0,
+      }}>
+        <Text>{item.englishName}</Text>
+        <Text>{item.arabicName}</Text>
+        
+        <SimpleAudioControls
+          audioUrl={item.audioUrl}
+          title={item.name}
+          onStateChange={(state) => updatePlayingState(item.id, state)}
+        />
+      </View>
+    );
+  };
+
+  return (
+    <FlatList
+      data={recitations}
+      renderItem={renderRecitation}
+      keyExtractor={(item) => item.id.toString()}
+    />
+  );
+}
+```
+
+## Button States
+
+<Tabs>
+  <Tab title="Play">
+    Shown when audio is stopped or paused.
+    - Gray circular background
+    - Play icon
+    - Tapping starts playback
+  </Tab>
+  <Tab title="Pause">
+    Shown when audio is playing.
+    - Primary color circular background
+    - White pause icon
+    - Tapping pauses playback
+  </Tab>
+  <Tab title="Loading">
+    Shown while audio is loading.
+    - Gray circular background
+    - Spinning loader icon
+    - Button disabled during loading
+  </Tab>
+  <Tab title="Stop">
+    Shown when audio is loaded or playing.
+    - Light red circular background
+    - Red square icon
+    - Smaller than play/pause button
+    - Tapping stops and unloads audio
+  </Tab>
+</Tabs>
+
+## Controls Layout
+
+```
+┌─────────────────┐
+│  [▶]  [⏹]      │  Not playing
+│  [⏸]  [⏹]      │  Playing
+│  [⏳]           │  Loading
+└─────────────────┘
+```
+
+- Play/Pause button: `size + 16` px diameter
+- Stop button: `size + 8` px diameter (only visible when sound loaded)
+- Spacing: `SPACING.xs` between buttons
+
+## Audio Configuration
+
+The component configures audio with optimal settings for background playback:
+
+```js
+const audioConfig = {
+  allowsRecordingIOS: false,
+  staysActiveInBackground: true,
+  playsInSilentModeIOS: true,
+  shouldDuckAndroid: true,
+  playThroughEarpieceAndroid: false,
+};
+```
+
+## Playback Status Tracking
+
+The component uses a robust dual-method approach for status tracking:
+
+### 1. Periodic Status Checks
+
+```js
+// Checks status every 500ms while playing
+statusCheckInterval = setInterval(async () => {
+  const status = await sound.getStatusAsync();
+  
+  // Detect playback completion
+  if (status.positionMillis >= status.durationMillis - 100) {
+    // Audio finished
+  }
+}, 500);
+```
+
+### 2. Playback Status Callback
+
+```js
+// Backup method via callback
+await sound.setOnPlaybackStatusUpdate((status) => {
+  if (status.didJustFinish) {
+    // Audio finished
+  }
+});
+```
+
+<Note>
+  This dual approach ensures reliable finish detection even if the callback fails to fire on some platforms.
+</Note>
+
+## State Management
+
+Internal states managed by the component:
+
+- `sound` - Expo AV Sound instance
+- `isPlaying` - Currently playing
+- `isLoading` - Loading audio
+- `hasFinished` - Playback completed
+- `mountedRef` - Ref to prevent state updates after unmount
+- `statusCheckInterval` - Ref to interval timer
+
+## Error Handling
+
+The component handles errors gracefully:
+
+```js
+try {
+  await sound.playAsync();
+} catch (error) {
+  console.error('Audio error:', error);
+  
+  // Show user-friendly alert
+  Alert.alert(
+    'Erreur de lecture',
+    'Impossible de lire ce fichier audio. Vérifiez votre connexion internet.'
+  );
+  
+  // Notify parent via callback
+  onStateChange({
+    isPlaying: false,
+    isLoading: false,
+    error: error.message,
+    hasFinished: false
+  });
+}
+```
+
+## Lifecycle Management
+
+### Component Mount
+1. Initialize state
+2. Set `mountedRef.current = true`
+
+### Audio Load
+1. Configure audio mode
+2. Create Sound instance
+3. Set playback status callback
+4. Start periodic status checks
+
+### Audio Play
+1. If finished, recreate sound
+2. Call `playAsync()`
+3. Update state
+4. Notify parent
+
+### Audio Stop
+1. Stop playback
+2. Unload sound
+3. Clear interval
+4. Reset state
+
+### Component Unmount
+1. Set `mountedRef.current = false`
+2. Clear status check interval
+3. Unload sound
+4. Cleanup complete
+
+<Note>
+  The component automatically prevents state updates after unmounting using `mountedRef`, preventing memory leaks and warnings.
+</Note>
+
+## Styling
+
+Buttons use theme colors:
+
+- **Play button:** `COLORS.buttonBg` background, `COLORS.textPrimary` icon
+- **Pause button:** `COLORS.primary` background, `COLORS.white` icon
+- **Stop button:** `COLORS.error + '20'` background, `COLORS.error` icon
+- **Loading:** Gray background, white loader
+
+## Dependencies
+
+Required packages:
+- `expo-av` - Audio playback (`Audio.Sound`)
+- `lucide-react-native` - Icons (Play, Pause, Square, Loader)
+- `react-native` - TouchableOpacity, View, Alert
+
+Internal dependencies:
+- Theme constants (COLORS, SPACING)
+
+## Performance Considerations
+
+<CodeGroup>
+```jsx Multiple Instances
+// Each SimpleAudioControls manages its own sound
+// Safe to use multiple instances simultaneously
+<FlatList
+  data={recitations}
+  renderItem={({ item }) => (
+    <SimpleAudioControls audioUrl={item.audioUrl} />
+  )}
+/>
+// Each item has independent audio control
+```
+
+```jsx Memory Cleanup
+// Component automatically cleans up on unmount
+useEffect(() => {
+  return () => {
+    if (sound) {
+      sound.unloadAsync().catch(console.warn);
+    }
+  };
+}, [sound]);
+```
+
+```jsx Preventing Stale Updates
+// Uses mountedRef to prevent updates after unmount
+const mountedRef = useRef(true);
+
+useEffect(() => {
+  return () => {
+    mountedRef.current = false;
+  };
+}, []);
+
+if (mountedRef.current) {
+  setIsPlaying(true);
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+1. **Always provide audioUrl:** Component requires valid audio URL
+2. **Handle state changes:** Use `onStateChange` to update UI based on playback state
+3. **Track multiple instances:** Use object keyed by ID to track states in lists
+4. **Don't manually clean up:** Component handles cleanup automatically
+5. **Check for audio availability:** Validate URLs before passing to component
+
+## Common Patterns
+
+### Highlight Currently Playing Item
+
+```jsx
+const isPlaying = playingStates[item.id]?.isPlaying;
+
+<View style={{ 
+  backgroundColor: isPlaying ? '#e3f2fd' : '#fff',
+  borderColor: isPlaying ? '#2196f3' : 'transparent'
+}}>
+  <SimpleAudioControls ... />
+</View>
+```
+
+### Show Loading Indicator
+
+```jsx
+const isLoading = audioState.isLoading;
+
+{isLoading && <ActivityIndicator />}
+```
+
+### Auto-play Next Item
+
+```jsx
+const handleStateChange = (state) => {
+  if (state.hasFinished) {
+    playNextRecitation();
+  }
+};
+```

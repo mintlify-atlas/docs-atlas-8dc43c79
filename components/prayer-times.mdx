@@ -1,0 +1,273 @@
+---
+title: PrayerTimes
+description: Display component for showing the five daily Islamic prayer times with visual indicators
+---
+
+## Overview
+
+The `PrayerTimes` component displays the five daily Islamic prayer times (Fajr, Dhuhr, Asr, Maghrib, and Isha) in a horizontal layout with icons and formatted times. It visually highlights the next upcoming prayer.
+
+## Features
+
+- Displays all five daily prayer times
+- Visual highlight for the next prayer (teal background)
+- Icon representation for each prayer time
+- Compact horizontal layout
+- Automatic time formatting
+- Responsive design
+
+## Props
+
+<ParamField path="prayerTimes" type="object" required>
+  Object containing the prayer times with keys for each prayer.
+  
+  **Structure:**
+  ```typescript
+  {
+    Fajr: string,    // e.g., "05:30 AM"
+    Dhuhr: string,   // e.g., "12:45 PM"
+    Asr: string,     // e.g., "04:15 PM"
+    Maghrib: string, // e.g., "07:30 PM"
+    Isha: string     // e.g., "09:00 PM"
+  }
+  ```
+</ParamField>
+
+<ParamField path="nextPrayer" type="string">
+  The name of the next upcoming prayer. Must be one of: `"Fajr"`, `"Dhuhr"`, `"Asr"`, `"Maghrib"`, or `"Isha"`.
+  
+  When specified, this prayer will be highlighted with a teal background.
+</ParamField>
+
+<ParamField path="formatTime" type="function" required>
+  Function to format the time string for display. The component removes AM/PM suffixes after formatting.
+  
+  **Signature:** `(time: string) => string`
+  
+  **Example:**
+  ```js
+  const formatTime = (time) => {
+    // Convert "05:30" to "05:30 AM"
+    return new Date(`2000-01-01 ${time}`).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+  ```
+</ParamField>
+
+## Prayer Configuration
+
+Each prayer time is displayed with specific visual properties:
+
+| Prayer | Icon | Display Name | Time Period |
+|--------|------|--------------|-------------|
+| Fajr | Sunrise | Fajr | Dawn/Pre-sunrise |
+| Dhuhr | Sun | Dhuhr | Midday |
+| Asr | Sun | Asr | Afternoon |
+| Maghrib | Sunset | Maghrib | Sunset |
+| Isha | Moon | Isha | Night |
+
+## Usage Example
+
+### Basic Implementation
+
+```jsx
+import PrayerTimes from '../components/PrayerTimes';
+
+function PrayerTimesScreen() {
+  const [prayerTimes, setPrayerTimes] = useState({
+    Fajr: "05:30",
+    Dhuhr: "12:45",
+    Asr: "16:15",
+    Maghrib: "19:30",
+    Isha: "21:00"
+  });
+  const [nextPrayer, setNextPrayer] = useState("Asr");
+
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  return (
+    <View>
+      <PrayerTimes
+        prayerTimes={prayerTimes}
+        nextPrayer={nextPrayer}
+        formatTime={formatTime}
+      />
+    </View>
+  );
+}
+```
+
+### Real Usage from PrayerTimesScreen
+
+```jsx
+import PrayerTimes from '../components/PrayerTimes';
+import { getPrayerTimesByCoords } from '../services/prayerTimesService';
+
+function PrayerTimesScreen() {
+  const [prayerTimes, setPrayerTimes] = useState(null);
+  const [nextPrayer, setNextPrayer] = useState(null);
+
+  useEffect(() => {
+    loadPrayerTimes();
+  }, []);
+
+  const loadPrayerTimes = async () => {
+    try {
+      const location = await getUserLocation();
+      const times = await getPrayerTimesByCoords(
+        location.coords.latitude,
+        location.coords.longitude
+      );
+      setPrayerTimes(times);
+      
+      // Calculate next prayer
+      const now = new Date();
+      const next = calculateNextPrayer(times, now);
+      setNextPrayer(next);
+    } catch (error) {
+      console.error('Error loading prayer times:', error);
+    }
+  };
+
+  const formatTime = (time) => {
+    return new Date(`2000-01-01 ${time}`).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <LinearGradient colors={GRADIENTS.primary} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        {prayerTimes && (
+          <PrayerTimes
+            prayerTimes={prayerTimes}
+            nextPrayer={nextPrayer}
+            formatTime={formatTime}
+          />
+        )}
+      </SafeAreaView>
+    </LinearGradient>
+  );
+}
+```
+
+## Styling
+
+The component uses NativeWind (Tailwind CSS) classes:
+
+```jsx
+// Container
+className="flex-row justify-between px-4 mb-6"
+
+// Individual prayer card
+className="items-center p-2 rounded-lg"
+
+// Next prayer highlight
+className="bg-teal-500"
+
+// Text styles
+className="text-white mt-1"        // Prayer name
+className="text-white font-bold"   // Time
+```
+
+## Layout Structure
+
+```
+┌─────────────────────────────────────────────────┐
+│  Fajr    Dhuhr    Asr    Maghrib    Isha       │
+│  [🌅]     [☀️]    [☀️]     [🌇]      [🌙]      │
+│  Fajr    Dhuhr    Asr    Maghrib    Isha       │
+│  05:30   12:45   16:15    19:30     21:00      │
+└─────────────────────────────────────────────────┘
+```
+
+The next prayer is highlighted with a teal background.
+
+## Time Formatting
+
+<Note>
+  The component automatically removes AM/PM suffixes from the formatted time:
+  ```js
+  formatTime(prayer.time).replace(' AM', '').replace(' PM', '')
+  ```
+  This ensures clean time display in the compact layout.
+</Note>
+
+## Integration with Prayer Times Service
+
+Typically used with prayer times data from APIs like:
+- Aladhan API
+- Islamic Network API
+- Custom prayer calculation methods
+
+```js
+import { getPrayerTimesByCoords } from '../services/prayerTimesService';
+
+// Fetch prayer times
+const times = await getPrayerTimesByCoords(latitude, longitude);
+
+// Expected format:
+// {
+//   Fajr: "05:30",
+//   Dhuhr: "12:45",
+//   Asr: "16:15",
+//   Maghrib: "19:30",
+//   Isha: "21:00"
+// }
+```
+
+## Dependencies
+
+Required packages:
+- `react-native` - View, Text components
+- `@expo/vector-icons` - Feather icon set
+- NativeWind for styling (or replace with StyleSheet)
+
+## Best Practices
+
+<CodeGroup>
+```jsx Calculating Next Prayer
+// Calculate which prayer is next based on current time
+function calculateNextPrayer(prayerTimes, currentTime) {
+  const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const now = currentTime.getTime();
+  
+  for (const prayer of prayers) {
+    const prayerTime = new Date(`${currentTime.toDateString()} ${prayerTimes[prayer]}`);
+    if (prayerTime.getTime() > now) {
+      return prayer;
+    }
+  }
+  
+  // If all prayers passed, next is Fajr tomorrow
+  return 'Fajr';
+}
+```
+
+```jsx Error Handling
+// Handle missing prayer times gracefully
+function SafePrayerTimes({ prayerTimes, nextPrayer, formatTime }) {
+  if (!prayerTimes) {
+    return <Text>Loading prayer times...</Text>;
+  }
+  
+  return (
+    <PrayerTimes
+      prayerTimes={prayerTimes}
+      nextPrayer={nextPrayer}
+      formatTime={formatTime}
+    />
+  );
+}
+```
+</CodeGroup>

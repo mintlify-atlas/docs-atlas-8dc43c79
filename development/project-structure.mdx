@@ -1,0 +1,294 @@
+---
+title: Project Structure
+description: Understand the folder organization and architecture of the AlXuraan React Native application
+---
+
+## Overview
+
+AlXuraan follows a feature-based folder structure organized by functionality, making it easy to locate and maintain code. The project uses React Native with Expo and follows best practices for mobile app development.
+
+## Root Directory Structure
+
+```
+source/
+├── assets/              # Static assets (fonts, images)
+├── components/          # Reusable UI components
+│   ├── ui/             # Base UI components (Button, Card, Theme)
+│   └── *.jsx           # Feature components
+├── context/            # React Context providers
+├── hooks/              # Custom React hooks
+├── navigation/         # Navigation configuration
+├── screens/            # Screen components
+├── services/           # API and external service integrations
+├── store/              # Zustand state management
+├── utils/              # Utility functions and helpers
+├── data/               # Static data files
+├── App.jsx             # Main application entry point
+└── app.config.ts       # Expo configuration
+```
+
+## Core Directories
+
+<Accordion title="components/">
+  Contains all reusable UI components organized by feature and type.
+
+  **UI Components** (`components/ui/`):
+  - `Theme.jsx` - Design system constants (colors, spacing, shadows)
+  - `Button.jsx` - Reusable button component
+  - `Card.jsx` - Card container component
+  - `Typography.jsx` - Text styling components
+  - `LoadingIndicator.jsx` - Loading states
+  - `Colors.jsx` - Color palette
+  - `Fonts.jsx` - Typography configuration
+
+  **Feature Components**:
+  - `PlayerMini.jsx` - Mini audio player
+  - `PrayerTimes.jsx` - Prayer times display
+  - `RecitationsList.jsx` - Recitation list view
+  - `Features.jsx` - Feature showcase
+  - `LiveStreams.jsx` - Live stream integration
+  - `SimpleAudioControls.jsx` - Audio playback controls
+</Accordion>
+
+<Accordion title="screens/">
+  Screen-level components that represent full pages in the app.
+
+  **Quran Screens**:
+  - `QuranScreen.jsx` - Quran browsing interface
+  - `SurahsScreen.jsx` - List of all surahs
+  - `SurahDetailScreen.jsx` - Individual surah view
+  - `SourateDetail.jsx` - Detailed surah display
+  - `AyaDetailScreen.jsx` - Individual ayah view
+
+  **Recitation Screens**:
+  - `QarisScreen.jsx` - List of Quran reciters
+  - `ReciterRecitationsScreenSimple.jsx` - Reciter's recitations
+  - `PlayerScreen.jsx` - Full audio player
+
+  **Hadith Screens**:
+  - `DhikrScreen.jsx` - Dhikr and hadith home
+  - `HadithCollectionScreen.jsx` - Hadith collections
+  - `CollectionBooksScreen.jsx` - Hadith books
+  - `HadithDetail.jsx` - Individual hadith view
+  - `SearchHadith.jsx` - Hadith search interface
+  - `HadithSettings.jsx` - Hadith preferences
+
+  **Other Screens**:
+  - `HomeScreen.jsx` - App home screen
+  - `PrayerTimesScreen.jsx` - Prayer times and qibla
+  - `FavoritesScreen.jsx` - User favorites
+  - `SettingsScreen.jsx` - App settings
+</Accordion>
+
+<Accordion title="navigation/">
+  React Navigation configuration and navigators.
+
+  - `AppNavigator.jsx` - Main tab navigation
+  - `QuranNavigator.jsx` - Quran stack navigator
+  - `SurashNavigator.jsx` - Reciter stack navigator
+  - `HadithNavigator.jsx` - Hadith stack navigator
+  - `QariNavigator.jsx` - Qari-specific navigation
+
+  See [Navigation System](/development/navigation) for detailed implementation.
+</Accordion>
+
+<Accordion title="context/">
+  React Context providers for global state management.
+
+  - `ThemeContext.jsx` - Theme management (light/dark mode)
+  - `PlayerContext.jsx` - Audio player state management
+
+  See [State Management](/development/state-management) for usage examples.
+</Accordion>
+
+<Accordion title="services/">
+  External API integrations and service layer.
+
+  **API Services**:
+  - `quranService.jsx` - Quran API integration
+  - `hadithService.jsx` - Hadith API integration
+  - `alxuraanService.jsx` - AlXuraan API client
+  - `aladhanService.jsx` - Aladhan prayer times API
+  - `prayerTimesService.jsx` - Prayer times calculations
+  - `adhanService.jsx` - Adhan notifications
+  - `mosquesService.jsx` - Nearby mosques lookup
+  - `qiblaService.jsx` - Qibla direction service
+  - `dhikrService.jsx` - Dhikr content service
+  - `notificationService.jsx` - Push notifications
+</Accordion>
+
+<Accordion title="hooks/">
+  Custom React hooks for reusable logic.
+
+  - `useQuranSurah.jsx` - Fetch Quran surah data
+  - `useHadith.jsx` - Fetch hadith data
+  - `useprayerTimes.jsx` - Get prayer times
+  - `useAdhan.jsx` - Adhan notifications
+  - `useHijriDate.jsx` - Islamic calendar dates
+  - `useNearbyMosques.jsx` - Find nearby mosques
+</Accordion>
+
+<Accordion title="store/">
+  Zustand store for global state management.
+
+  - `store.js` - Favorites management store
+
+  Uses Zustand for lightweight, performant state management with AsyncStorage persistence.
+</Accordion>
+
+<Accordion title="utils/">
+  Utility functions and helper modules.
+
+  - `storage.js` - AsyncStorage wrapper functions
+  - `reciterNames.js` - Reciter name mappings
+  - Test files for development
+</Accordion>
+
+## Configuration Files
+
+<CodeGroup>
+
+```typescript app.config.ts
+// Expo app configuration
+export default {
+  name: "AlXuraan",
+  slug: "alxuraan",
+  // ... configuration
+}
+```
+
+```javascript babel.config.js
+// Babel configuration for React Native
+module.exports = function(api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+  };
+};
+```
+
+```javascript metro.config.js
+// Metro bundler configuration
+const { getDefaultConfig } = require('expo/metro-config');
+module.exports = getDefaultConfig(__dirname);
+```
+
+```javascript tailwind.config.js
+// Tailwind CSS configuration for NativeWind
+module.exports = {
+  content: [
+    "./App.{js,jsx,ts,tsx}",
+    "./screens/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}"
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+```
+
+</CodeGroup>
+
+## Assets Organization
+
+```
+assets/
+├── fonts/              # Custom fonts (Poppins family)
+│   ├── Poppins-Regular.ttf
+│   ├── Poppins-Bold.ttf
+│   ├── Poppins-Italic.ttf
+│   └── Poppins-BoldItalic.ttf
+└── images/            # App images and icons
+```
+
+<Info>
+  Fonts are loaded asynchronously in `App.jsx` during app initialization to ensure they're available before rendering.
+</Info>
+
+## Entry Point
+
+The application entry point is `App.jsx`, which sets up providers and navigation:
+
+```jsx App.jsx
+import { NavigationContainer } from '@react-navigation/native';
+import { ThemeProvider } from './context/ThemeContext';
+import { PlayerProvider } from './context/PlayerContext';
+import AppNavigator from './navigation/AppNavigator';
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <PlayerProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </PlayerProvider>
+    </ThemeProvider>
+  );
+}
+```
+
+## Design System
+
+The design system is centralized in `components/ui/Theme.jsx`:
+
+```jsx components/ui/Theme.jsx
+export const COLORS = {
+  background: '#0F0A1E',
+  cardBackground: '#1F1A2C',
+  primary: '#928DAB',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#928DAB',
+};
+
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+};
+
+export const BORDER_RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+};
+
+export const SHADOWS = {
+  small: { /* ... */ },
+  medium: { /* ... */ },
+  large: { /* ... */ },
+};
+```
+
+<Note>
+  All components should import design tokens from `Theme.jsx` instead of hardcoding values to maintain consistency.
+</Note>
+
+## Best Practices
+
+1. **Component Organization**: Keep components small and focused on a single responsibility
+2. **File Naming**: Use PascalCase for component files (e.g., `PlayerMini.jsx`)
+3. **Service Layer**: All API calls should go through services, never directly in components
+4. **Custom Hooks**: Extract reusable logic into custom hooks in the `hooks/` directory
+5. **State Management**: Use Context for UI state, Zustand for persistent data
+6. **Navigation**: Keep navigation logic in navigator files, not in screens
+
+## Adding New Features
+
+When adding a new feature:
+
+1. Create screen components in `screens/`
+2. Add reusable components to `components/`
+3. Create a navigator in `navigation/` if needed
+4. Add API integration in `services/`
+5. Create custom hooks in `hooks/` for data fetching
+6. Update the appropriate navigator to include new screens
+
+<Info>
+  Follow the existing patterns in the codebase to maintain consistency and readability.
+</Info>
